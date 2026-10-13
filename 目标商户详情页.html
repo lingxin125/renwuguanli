@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>目标商户详情</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        postal: {
+                            primary: '#00963f',  // 邮政绿主色
+                            secondary: '#e8f5e9', // 浅绿色背景
+                            hover: '#007a33',    // 深绿色(悬停)
+                            light: '#f0f9f0',    // 更浅的背景色
+                            gray: '#f5f5f5',      // 灰色背景
+                            orange: '#ff9800',   // 意向商户橙色
+                            orangeLight: '#fff3e0' // 意向商户浅橙色
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f5f5f5;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        .field-group {
+            display: flex;
+            border-bottom: 1px solid #e5e5e5;
+            padding: 12px 0;
+        }
+        .field-label {
+            width: 100px;
+            color: #333;
+            font-size: 14px;
+        }
+        .field-value {
+            flex: 1;
+            color: #333;
+            font-size: 14px;
+        }
+        .field-value input, .field-value textarea {
+            width: 100%;
+            border: none;
+            outline: none;
+            background: transparent;
+            color: #666;
+        }
+        .field-value input::placeholder, .field-value textarea::placeholder {
+            color: #999;
+        }
+        .card-title {
+            display: flex;
+            align-items: center;
+            padding: 15px 0;
+        }
+        .card-title::before {
+            content: "";
+            width: 3px;
+            height: 16px;
+            background-color: #00963f;
+            margin-right: 8px;
+        }
+        .required {
+            color: #f44336;
+            margin-left: 4px;
+        }
+    </style>
+    <link rel="stylesheet" href="mobile-shell.css">
+    <script defer src="mobile-shell.js"></script>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <header class="bg-postal-primary text-white">
+        <div class="flex items-center justify-between p-4">
+            <div class="flex items-center">
+                <a href="任务列表页（目标商户）.html" class="mr-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </a>
+                <h1 class="text-lg font-medium">商户详情</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button class="w-6 h-6">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                    </svg>
+                </button>
+                <button class="w-6 h-6">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                        <path d="M12 8v8M8 12h8" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 商户基本信息 -->
+    <div class="bg-white mb-3">
+        <div class="card-title">
+            <h3 class="font-medium">商户基本信息<span class="required">(必填)</span></h3>
+        </div>
+        <div class="px-4">
+            <div class="field-group">
+                <div class="field-label">商户名称</div>
+                <div class="field-value">
+                    <input type="text" value="万达影城21号店" placeholder="请输入商户名称">
+                </div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">联系人</div>
+                <div class="field-value">
+                    <input type="text" placeholder="请输入联系人">
+                </div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">联系电话</div>
+                <div class="field-value">
+                    <input type="tel" placeholder="请输入联系电话">
+                </div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">商户地址</div>
+                <div class="field-value">
+                    <input type="text" value="河北保定竞秀区龙泉路" placeholder="请输入商户地址">
+                </div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">行业参考</div>
+                <div class="field-value">
+                    <input type="text" value="小商品批发" placeholder="请输入行业参考">
+                </div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">创建时间</div>
+                <div class="field-value">
+                    <input type="text" value="2024-11-26 17:00:29" readonly style="color: #999;">
+                </div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">打卡状态</div>
+                <div class="field-value">
+                    <input type="text" value="未打卡" readonly style="color: #999;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 打卡照片 -->
+    <div class="bg-white mb-3">
+        <div class="card-title">
+            <h3 class="font-medium">打卡照片<span class="required">(必填)</span></h3>
+        </div>
+        <div class="p-4">
+            <div class="w-64 h-48 bg-gray-100 flex items-center justify-center rounded">
+                <div class="text-center text-gray-400">
+                    <div class="mb-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" class="mx-auto text-gray-300">
+                            <rect x="4" y="8" width="16" height="12" rx="2" stroke-width="1.5"/>
+                            <path d="M6 8V6a2 2 0 012-2h8a2 2 0 012 2v2" stroke-width="1.5"/>
+                            <path d="M10 11h4v4h-4z" stroke-width="1.5"/>
+                        </svg>
+                    </div>
+                    <p>落地门头照</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 业绩录入 -->
+    <div class="bg-white mb-3">
+        <div class="card-title">
+            <h3 class="font-medium">业绩录入</h3>
+        </div>
+        <div class="p-4 text-center">
+            <p class="text-gray-500 my-4">暂无数据</p>
+            <button class="w-full py-3 bg-postal-primary text-white rounded-md">新增业绩</button>
+        </div>
+    </div>
+
+    <!-- 备注 -->
+    <div class="bg-white mb-3">
+        <div class="card-title">
+            <h3 class="font-medium">备注</h3>
+        </div>
+        <div class="p-4">
+            <textarea rows="2" class="w-full border-none outline-none" placeholder="请输入备注"></textarea>
+        </div>
+    </div>
+
+    <!-- 底部按钮 -->
+    <div class="fixed bottom-0 left-0 right-0 flex bg-white border-t border-gray-200">
+        <button class="flex-1 py-4 text-center text-gray-700 font-medium">仅打卡</button>
+        <button class="flex-1 py-4 text-center bg-postal-primary text-white font-medium">意向商户转化</button>
+    </div>
+</body>
+</html> 

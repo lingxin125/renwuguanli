@@ -1,0 +1,1740 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>任务管理系统-地图模式（升级版）</title>
+    <!-- 使用TailwindCSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        postal: {
+                            primary: '#00963f',  // 邮政绿主色
+                            secondary: '#e8f5e9', // 浅绿色背景
+                            hover: '#007a33',    // 深绿色(悬停)
+                            light: '#f0f9f0',    // 更浅的背景色
+                            gray: '#f5f5f5',      // 灰色背景
+                            orange: '#ff9800',   // 意向商户橙色
+                            orangeLight: '#fff3e0' // 意向商户浅橙色
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(100%); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* 商户Item动画 */
+        .merchant-item {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+        
+        /* 筛选弹出框样式 */
+        .filter-drawer {
+            display: none;
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: white;
+            border-radius: 16px 16px 0 0;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 50;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .filter-drawer.active {
+            display: block;
+            animation: slideUp 0.3s ease-out forwards;
+        }
+        
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 40;
+        }
+        
+        .overlay.active {
+            display: block;
+        }
+        
+        /* 任务数量红点样式 */
+        .task-badge {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 20px;
+            height: 20px;
+            background-color: #ff3b30;
+            color: white;
+            border-radius: 10px;
+            padding: 0 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        /* 优先级标签样式 */
+        .priority-badge {
+            display: inline-flex;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+        
+        .priority-urgent {
+            background-color: #ffebee;
+            color: #d32f2f;
+        }
+        
+        .priority-high {
+            background-color: #fff8e1;
+            color: #ff8f00;
+        }
+        
+        .priority-normal {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        /* 模拟地图容器样式 */
+        .mock-map-container {
+            width: 100%;
+            height: calc(100vh - 190px);
+            min-height: 400px;
+            background-color: #f0f0f0;
+            position: relative;
+            overflow: hidden;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        /* 地图标记点 */
+        .map-marker {
+            position: absolute;
+            width: 32px;
+            height: 32px;
+            margin-left: -16px;
+            margin-top: -32px;
+            z-index: 2;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .map-marker.urgent {
+            z-index: 3;
+        }
+        
+        .map-marker.active {
+            z-index: 4;
+            transform: scale(1.2);
+        }
+        
+        /* 聚合标记点 */
+        .cluster-marker {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            margin-left: -20px;
+            margin-top: -20px;
+            background-color: rgba(0, 150, 63, 0.8);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            z-index: 5;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        /* 聚合列表 */
+        .cluster-list {
+            position: absolute;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            padding: 8px;
+            z-index: 10;
+            display: none;
+            min-width: 200px;
+            max-width: 90%;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .cluster-list.active {
+            display: block;
+        }
+        
+        /* 地图上方商户卡片样式 */
+        .map-merchant-card {
+            position: absolute;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 420px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+            z-index: 10;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        
+        .map-merchant-card.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        /* 底部商户列表样式 */
+        .bottom-merchant-list {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 16px 16px 0 0;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 20;
+            /* 默认隐藏状态 - 只显示顶部拖动条 */
+            transform: translateY(calc(100% - 40px));
+            transition: transform 0.3s ease;
+            /* 最大高度限制，避免覆盖整个屏幕 */
+            max-height: 80vh;
+        }
+        
+        /* 半展开状态 - 显示部分商户列表 */
+        .bottom-merchant-list.half-expanded {
+            transform: translateY(60%);
+        }
+        
+        /* 全展开状态 */
+        .bottom-merchant-list.fully-expanded {
+            transform: translateY(0);
+        }
+        
+        /* 自定义位置状态 */
+        .bottom-merchant-list.custom-position {
+            transition: none; /* 拖拽时禁用过渡效果 */
+        }
+        
+        /* 拖动条样式 */
+        .handle-bar {
+            width: 60px;
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            margin: 8px auto;
+        }
+        
+        /* 拖动条容器样式 */
+        .handle-bar-container {
+            cursor: grab;
+            padding: 8px 0;
+            text-align: center;
+        }
+        
+        .handle-bar-container:active {
+            cursor: grabbing;
+        }
+        
+        /* 加载动画 */
+        .shimmer {
+            background: #f6f7f8;
+            background-image: linear-gradient(to right, #f6f7f8 0%, #edeef1 20%, #f6f7f8 40%, #f6f7f8 100%);
+            background-repeat: no-repeat;
+            background-size: 800px 104px; 
+            animation-duration: 1.5s;
+            animation-fill-mode: forwards; 
+            animation-iteration-count: infinite;
+            animation-name: shimmer;
+            animation-timing-function: linear;
+        }
+        
+        @keyframes shimmer {
+            0% {
+                background-position: -468px 0;
+            }
+            100% {
+                background-position: 468px 0; 
+            }
+        }
+
+        /* 模拟地图控件 */
+        .map-controls {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            z-index: 5;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .map-control-btn {
+            width: 40px;
+            height: 40px;
+            background: white;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            cursor: pointer;
+        }
+    </style>
+    <link rel="stylesheet" href="mobile-shell.css">
+    <script defer src="mobile-shell.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- 顶部导航栏 -->
+    <header class="bg-postal-primary text-white shadow-md">
+        <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center w-full relative">
+                <!-- 
+                    返回按钮，点击后跳转回任务列表页（商户）.html
+                    @description 点击返回按钮跳转到任务列表页（商户）.html
+                 -->
+                <button class="absolute left-0 mr-3" onclick="window.location.href='任务类型选择页.html'">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <h1 class="text-xl font-medium w-full text-center">任务管理</h1>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button class="p-1 rounded-full hover:bg-postal-hover transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                </button>
+                <button class="p-1 rounded-full hover:bg-postal-hover transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 搜索栏 -->
+    <div class="bg-white shadow-sm sticky top-0 z-10">
+        <div class="container mx-auto p-4">
+            <div class="relative flex">
+                <div class="relative flex-grow">
+                    <input id="search-input" type="text" placeholder="搜索商户名称或商户号" class="w-full pl-10 pr-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-postal-primary focus:border-transparent transition-all">
+                    <div class="absolute left-3 top-2.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                </div>
+                <!-- 筛选按钮 -->
+                <button id="filterBtn" class="ml-2 p-2 text-postal-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M4.25 5.61C6.57 8.59 10 13 10 13v6c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-6s3.43-4.41 5.75-7.39c.51-.66.04-1.61-.8-1.61H5.04c-.83 0-1.3.95-.79 1.61z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 排序选项 -->
+    <div class="bg-white border-b border-gray-200 shadow-sm">
+        <div class="container mx-auto px-4 py-2">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center relative space-x-2">
+                    <div class="relative">
+                        <button id="sortBtn" class="flex items-center text-sm px-3 py-1.5 border border-gray-300 rounded-full hover:bg-gray-50 transition-colors">
+                            <span class="mr-1">距离商户由近及远</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <!-- 排序下拉菜单 -->
+                        <div id="sortDropdown" class="hidden absolute left-0 top-full mt-1 bg-white shadow-lg rounded-lg z-20 w-48 py-1 border border-gray-200">
+                            <div class="cursor-pointer px-4 py-2 hover:bg-gray-100 text-sm sort-option active" data-sort="distance">距离商户由近及远</div>
+                            <div class="cursor-pointer px-4 py-2 hover:bg-gray-100 text-sm sort-option" data-sort="task-count">待办任务数量降序</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 视图切换按钮组 -->
+                <div class="flex bg-gray-100 p-0.5 rounded-full">
+                    <a href="任务列表页（商户）.html" id="listViewBtn" class="flex items-center justify-center px-3 py-1.5 rounded-full text-gray-600 hover:bg-gray-50 text-sm transition-all focus:outline-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                        列表模式
+                    </a>
+                    <button id="mapViewBtn" class="flex items-center justify-center px-3 py-1.5 rounded-full bg-white text-postal-primary text-sm shadow-sm transition-all focus:outline-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                        </svg>
+                        地图模式
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 地图区域 -->
+    <div class="container mx-auto px-4 py-4">
+        <!-- 
+            @desc 商户任务数量右对齐
+        -->
+        <div class="flex justify-between items-center mb-4">
+            <button class="flex items-center text-sm px-4 py-1.5 bg-postal-primary text-white rounded-full hover:bg-postal-hover transition-colors" onclick="window.location.href='新增目标商户.html'">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                新增目标商户
+            </button>
+            <div class="text-sm text-gray-500" id="merchant-count">共 <span class="font-semibold">24</span> 个商户任务</div>
+        </div>
+        
+        <!-- 模拟地图容器 -->
+        <div class="mock-map-container" id="map-container">
+            <!-- 地图背景 - 使用灰色背景+网格线模拟 -->
+            <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#e5e5e5" stroke-width="1"/>
+                    </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="#f8f9fa"/>
+                <rect width="100%" height="100%" fill="url(#grid)" />
+                <!-- 添加一些线路图案模拟道路 -->
+                <path d="M 100 100 L 400 120 L 600 300 L 800 280" stroke="#e0e0e0" stroke-width="8" fill="none" />
+                <path d="M 100 300 L 300 280 L 500 400 L 700 350" stroke="#e0e0e0" stroke-width="8" fill="none" />
+                <path d="M 400 120 L 420 400" stroke="#e0e0e0" stroke-width="8" fill="none" />
+                <path d="M 600 300 L 580 500" stroke="#e0e0e0" stroke-width="8" fill="none" />
+            </svg>
+            
+            <!-- 商户点位会在JS中动态添加 -->
+            
+            <!-- 地图控件 -->
+            <div class="map-controls">
+                <div class="map-control-btn" id="zoomIn">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                </div>
+                <div class="map-control-btn" id="zoomOut">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 12H6" />
+                    </svg>
+                </div>
+                <div class="map-control-btn" id="resetMap">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 地图上悬浮的商户卡片 -->
+        <div id="map-merchant-card" class="map-merchant-card p-4">
+            <div class="border-l-4 border-postal-primary bg-white p-4 rounded-lg">
+                <!-- 商户卡片头部 - 优先级标签 -->
+                <div class="flex justify-between items-center">
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <h3 id="card-merchant-name" class="font-medium text-lg">好利来蛋糕店</h3>
+                            <span id="card-merchant-type" class="px-2 py-0.5 rounded-full bg-postal-secondary text-postal-primary text-xs">正式商户</span>
+                        </div>
+                        <span id="card-merchant-id-label" class="text-gray-500 text-sm mt-1">商户号:</span>
+                        <span id="card-merchant-id" class="text-black text-sm ml-1">1234567890</span>
+                        <p class="text-gray-500 text-sm mt-1">距离商户: <span id="card-distance" class="text-black">约0.1km</span></p>
+                        <span class="text-gray-500 mt-1 text-sm">
+                            待办任务:
+                            <span id="card-task-count" class="px-2 py-0.5 rounded-full bg-red-100 text-red-600 font-semibold">3</span>
+                        </span>
+                    </div>
+                    <a href="#" id="card-details-link" class="flex items-center justify-center w-12 h-12 rounded-full hover:bg-gray-100 transition-colors ml-2" style="align-self: center;" title="进入详情页">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </a>
+                </div>
+                
+                <div id="card-task-tags" class="mt-3 flex flex-wrap gap-2">
+                    <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs">补充资料</span>
+                    <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">切换备用通道</span>
+                </div>
+                
+                <!-- 操作按钮区：只保留导航按钮并居中 -->
+                <div class="mt-4 flex justify-center">
+                    <button id="card-nav-btn" class="flex-1 max-w-xs py-2 bg-postal-primary text-white rounded-full text-sm hover:bg-postal-hover transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        导航到此处
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 聚合点击后显示的商户列表 -->
+        <div id="cluster-list" class="cluster-list">
+            <div class="font-medium text-gray-700 mb-2 pb-1 border-b">请选择商户</div>
+            <div id="cluster-items" class="space-y-2">
+                <!-- 聚合点商户列表项将通过JS动态添加 -->
+            </div>
+        </div>
+        
+        <!-- 底部可展开的商户列表 -->
+        <div id="bottom-merchant-list" class="bottom-merchant-list">
+            <div class="handle-bar-container pt-2 pb-1 cursor-pointer" id="handle-bar">
+                <div class="handle-bar"></div>
+            </div>
+            <div class="px-4 pb-4">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-medium text-lg">附近商户列表</h3>
+                    <!-- 底部列表筛选 -->
+                    <div class="flex gap-2">
+                        <button id="bottom-list-filter-all" class="px-3 py-1 text-xs rounded-full bg-postal-primary text-white">全部</button>
+                    </div>
+                </div>
+                
+                <!-- 底部列表搜索 -->
+                <div class="relative mb-3">
+                    <input id="bottom-list-search" type="text" placeholder="搜索商户" class="w-full pl-8 pr-4 py-1.5 rounded-full border border-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-postal-primary focus:border-transparent transition-all">
+                    <div class="absolute left-3 top-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                </div>
+                
+                <div id="bottom-list-container" class="space-y-3 max-h-[40vh] overflow-y-auto pb-6">
+                    <!-- 商户列表项将通过JS动态添加 -->
+                    <div class="text-center text-gray-500 py-4 shimmer rounded-lg h-16">
+                        加载中...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 当前位置浮动按钮 -->
+    <button id="locate-me" class="fixed right-4 bottom-32 bg-white p-3 rounded-full shadow-lg z-30">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-postal-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+    </button>
+
+    <!-- 筛选弹框 -->
+    <div id="overlay" class="overlay"></div>
+    <div id="filterDrawer" class="filter-drawer">
+        <div class="p-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-medium text-lg">筛选条件</h3>
+                <button id="closeFilterBtn" class="text-gray-500 hover:text-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="border-b border-gray-200 py-3">
+                <h4 class="font-medium mb-3">商户类型</h4>
+                <div class="flex flex-wrap gap-2">
+                    <button class="px-3 py-1 rounded-full bg-postal-primary text-white text-sm filter-option" data-type="merchant-type" data-value="all">全部</button>
+                    <button class="px-3 py-1 rounded-full bg-postal-secondary text-postal-primary text-sm filter-option" data-type="merchant-type" data-value="formal">正式商户</button>
+                    <button class="px-3 py-1 rounded-full bg-postal-secondary text-postal-primary text-sm filter-option" data-type="merchant-type" data-value="target">目标商户</button>
+                    <button class="px-3 py-1 rounded-full bg-postal-secondary text-postal-primary text-sm filter-option" data-type="merchant-type" data-value="intention">意向商户</button>
+                </div>
+            </div>
+            
+            <div class="border-b border-gray-200 py-3">
+                <h4 class="font-medium mb-3">任务类型</h4>
+                <div class="flex flex-wrap gap-2">
+                    <button class="px-3 py-1 rounded-full bg-postal-primary text-white text-sm filter-option" data-type="task-type" data-value="all">全部</button>
+                    <button class="px-3 py-1 rounded-full bg-postal-secondary text-postal-primary text-sm filter-option" data-type="task-type" data-value="supplement">补充资料</button>
+                    <button class="px-3 py-1 rounded-full bg-postal-secondary text-postal-primary text-sm filter-option" data-type="task-type" data-value="switch">切换备用通道</button>
+                    <button class="px-3 py-1 rounded-full bg-postal-secondary text-postal-primary text-sm filter-option" data-type="task-type" data-value="visit">走访维护商户</button>
+                    <button class="px-3 py-1 rounded-full bg-postal-secondary text-postal-primary text-sm filter-option" data-type="task-type" data-value="target">目标商户走访</button>
+                    <button class="px-3 py-1 rounded-full bg-postal-secondary text-postal-primary text-sm filter-option" data-type="task-type" data-value="control">风控处理</button>
+                    <button class="px-3 py-1 rounded-full bg-postal-secondary text-postal-primary text-sm filter-option" data-type="task-type" data-value="account">挂帐处理</button>
+                </div>
+            </div>
+            
+            <div class="flex space-x-3 mt-5">
+                <button id="filter-reset" class="flex-1 py-2 bg-gray-200 text-gray-700 rounded-full text-sm hover:bg-gray-300 transition-colors">重置</button>
+                <button id="filter-apply" class="flex-1 py-2 bg-postal-primary text-white rounded-full text-sm hover:bg-postal-hover transition-colors">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 导航到商户提示弹窗 -->
+    <div id="navigation-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div class="fixed inset-0 bg-black bg-opacity-50"></div>
+        <div class="bg-white rounded-lg p-6 max-w-sm mx-4 z-10">
+            <div class="text-center mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-postal-primary mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <h3 class="text-lg font-medium text-gray-900">导航到商户</h3>
+                <p class="text-gray-500 mt-2" id="nav-merchant-name">好利来蛋糕店</p>
+                <p class="text-sm text-gray-500 mt-1">将跳转到地图 App 进行导航</p>
+            </div>
+            
+            <div class="flex gap-2">
+                <button id="nav-cancel" class="flex-1 py-2 bg-gray-200 text-gray-700 rounded-full text-sm hover:bg-gray-300 transition-colors">取消</button>
+                <button id="nav-confirm" class="flex-1 py-2 bg-postal-primary text-white rounded-full text-sm hover:bg-postal-hover transition-colors">确认导航</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript 代码 -->
+    <script>
+        /**
+         * 商户数据（模拟）
+         * @description 商户的位置和详细信息，包含优先级和任务类型数据
+         */
+        const merchants = [
+            {
+                id: "1",
+                name: "好利来蛋糕店",
+                type: "formal", // 正式商户
+                merchantId: "1234567890",
+                distance: "约0.1km",
+                tasks: 3,
+                taskTypes: ["supplement", "switch", "visit"], // 补充资料、切换备用通道、走访维护商户
+                taskTypeNames: ["补充资料", "切换备用通道", "走访维护商户"],
+                priority: "urgent", // 紧急
+                position: { x: 300, y: 150 }, // 模拟位置坐标
+                borderColor: "postal-primary"
+            },
+            {
+                id: "2",
+                name: "美佳超市",
+                type: "intention", // 意向商户
+                source: "手工录入",
+                distance: "约0.37km",
+                tasks: 1,
+                taskTypes: ["target"], // 目标商户走访
+                taskTypeNames: ["目标商户走访"],
+                priority: "high", // 高优先级
+                position: { x: 550, y: 180 },
+                borderColor: "postal-orange"
+            },
+            {
+                id: "3",
+                name: "小张杂货铺",
+                type: "formal",
+                merchantId: "9876543210",
+                distance: "约1.1km",
+                tasks: 2,
+                taskTypes: ["supplement", "switch"], // 补充资料、切换备用通道
+                taskTypeNames: ["补充资料", "切换备用通道"],
+                priority: "high", // 高优先级
+                position: { x: 400, y: 280 },
+                borderColor: "postal-primary"
+            },
+            {
+                id: "4",
+                name: "全家便利店",
+                type: "formal",
+                merchantId: "5463728190",
+                distance: "约2.1km",
+                tasks: 1,
+                taskTypes: ["visit"], // 走访维护商户
+                taskTypeNames: ["走访维护商户"],
+                priority: "normal", // 普通优先级
+                position: { x: 200, y: 220 },
+                borderColor: "postal-primary"
+            },
+            {
+                id: "5",
+                name: "星巴克咖啡",
+                type: "formal",
+                merchantId: "3726495108",
+                distance: "约1.5km",
+                tasks: 2,
+                taskTypes: ["supplement", "control"], // 补充资料、风控处理
+                taskTypeNames: ["补充资料", "风控处理"],
+                priority: "urgent", // 紧急
+                position: { x: 600, y: 240 },
+                borderColor: "postal-primary"
+            },
+            {
+                id: "6",
+                name: "沙县小吃",
+                type: "formal",
+                merchantId: "6521739408",
+                distance: "约0.8km",
+                tasks: 1,
+                taskTypes: ["account"], // 挂账处理
+                taskTypeNames: ["挂账处理"],
+                priority: "normal", // 普通优先级
+                position: { x: 500, y: 320 },
+                borderColor: "postal-primary"
+            },
+            {
+                id: "7",
+                name: "永和大王",
+                type: "intention",
+                source: "系统推荐",
+                distance: "约1.8km",
+                tasks: 1,
+                taskTypes: ["target"], // 目标商户走访
+                taskTypeNames: ["目标商户走访"],
+                priority: "normal", // 普通优先级
+                position: { x: 350, y: 380 },
+                borderColor: "postal-orange"
+            }
+        ];
+        
+        // 聚合点定义 - 模拟多个商户位于相近位置
+        const clusters = [
+            {
+                id: "cluster1",
+                position: { x: 420, y: 200 },
+                count: 3,
+                merchantIds: ["8", "9", "10"]
+            }
+        ];
+        
+        // 聚合中的商户
+        const clusterMerchants = [
+            {
+                id: "8",
+                name: "香格里拉酒店",
+                type: "formal",
+                merchantId: "4567891230",
+                distance: "约2.3km",
+                tasks: 2,
+                taskTypes: ["supplement", "visit"], // 补充资料、走访维护商户
+                taskTypeNames: ["补充资料", "走访维护商户"],
+                priority: "high", // 高优先级
+                position: { x: 420, y: 200 },
+                borderColor: "postal-primary"
+            },
+            {
+                id: "9",
+                name: "肯德基餐厅",
+                type: "formal",
+                merchantId: "7654321098",
+                distance: "约2.3km",
+                tasks: 1,
+                taskTypes: ["switch"], // 切换备用通道
+                taskTypeNames: ["切换备用通道"],
+                priority: "normal", // 普通优先级
+                position: { x: 422, y: 200 },
+                borderColor: "postal-primary"
+            },
+            {
+                id: "10",
+                name: "百果园水果店",
+                type: "formal",
+                merchantId: "1357924680",
+                distance: "约2.4km",
+                tasks: 3,
+                taskTypes: ["supplement", "switch", "control"], // 补充资料、切换备用通道、风控处理
+                taskTypeNames: ["补充资料", "切换备用通道", "风控处理"],
+                priority: "urgent", // 紧急
+                position: { x: 425, y: 205 },
+                borderColor: "postal-primary"
+            }
+        ];
+        
+        // 合并所有商户数据，便于查找
+        const allMerchants = [...merchants, ...clusterMerchants];
+        
+        // 应用状态
+        const appState = {
+            selectedMerchantId: null,
+            activeClusterId: null,
+            filters: {
+                merchantType: 'all',
+                taskType: 'all'
+            },
+            sort: 'distance',
+            searchKeyword: '',
+            mapScale: 1
+        };
+        
+        // DOM元素引用
+        let mapContainer, mapMerchantCard, bottomMerchantList, clusterList;
+        
+        /**
+         * 初始化页面功能
+         * @description 初始化地图、筛选功能和商户列表交互
+         */
+        document.addEventListener('DOMContentLoaded', function() {
+            // 获取DOM元素引用
+            mapContainer = document.getElementById('map-container');
+            mapMerchantCard = document.getElementById('map-merchant-card');
+            bottomMerchantList = document.getElementById('bottom-merchant-list');
+            clusterList = document.getElementById('cluster-list');
+            
+            // 初始化商户点位
+            initMapMarkers();
+            
+            // 初始化底部列表
+            initBottomList();
+            
+            // 底部列表展开/收起功能
+            initBottomListDrag();
+            
+            // 筛选功能
+            initFilters();
+            
+            // 排序功能
+            initSorting();
+            
+            // 搜索功能
+            initSearch();
+            
+            // 导航功能
+            initNavigation();
+            
+            // 地图控件
+            initMapControls();
+            
+            // 更新商户计数
+            updateMerchantCount();
+        });
+        
+        /**
+         * 初始化地图标记点
+         * @description 在模拟地图上添加商户标记和聚合点
+         */
+        function initMapMarkers() {
+            // 添加商户标记点
+            merchants.forEach(merchant => {
+                const marker = createMarkerElement(merchant);
+                mapContainer.appendChild(marker);
+                
+                // 点击事件 - 显示商户卡片
+                marker.addEventListener('click', () => {
+                    showMerchantCard(merchant.id);
+                });
+            });
+            
+            // 添加聚合点
+            clusters.forEach(cluster => {
+                const clusterMarker = createClusterMarker(cluster);
+                mapContainer.appendChild(clusterMarker);
+                
+                // 点击事件 - 显示聚合列表
+                clusterMarker.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showClusterList(cluster.id, clusterMarker);
+                });
+            });
+            
+            // 点击地图空白处关闭商户卡片和聚合列表
+            mapContainer.addEventListener('click', (e) => {
+                if (e.target === mapContainer || e.target.tagName === 'svg' || e.target.tagName === 'rect' || e.target.tagName === 'path') {
+                    hideMarkerCard();
+                    hideClusterList();
+                }
+            });
+        }
+        
+        /**
+         * 创建标记点元素
+         * @param {Object} merchant - 商户数据
+         * @return {HTMLElement} 标记点DOM元素
+         */
+        function createMarkerElement(merchant) {
+            /**
+             * 创建地图标记点元素
+             * @param {Object} merchant - 商户数据
+             * @returns {HTMLElement} 标记点DOM元素
+             */
+            const marker = document.createElement('div');
+            marker.className = 'map-marker';
+            marker.id = `marker-${merchant.id}`;
+            marker.dataset.merchantId = merchant.id;
+
+            // 只根据商户类型设置颜色
+            let markerColor = merchant.type === 'formal' ? '#00963f' : '#ff9800';
+            let borderColor = merchant.type === 'formal' ? '#c8e6c9' : '#ffe0b2';
+
+            // 设置标记点位置
+            marker.style.left = `${merchant.position.x}px`;
+            marker.style.top = `${merchant.position.y}px`;
+
+            // 设置标记点样式
+            marker.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="${markerColor}"/>
+                    <circle cx="12" cy="9" r="3" fill="white"/>
+                    ${merchant.tasks > 0 ? `<circle cx="20" cy="4" r="4" fill="#ff3b30"/>
+                    <text x="20" y="5.5" font-size="6" text-anchor="middle" fill="white">${merchant.tasks}</text>` : ''}
+                </svg>
+            `;
+
+            return marker;
+        }
+        
+        /**
+         * 创建聚合标记点元素
+         * @param {Object} cluster - 聚合点数据
+         * @return {HTMLElement} 聚合标记DOM元素
+         */
+        function createClusterMarker(cluster) {
+            const marker = document.createElement('div');
+            marker.className = 'cluster-marker';
+            marker.id = `cluster-${cluster.id}`;
+            marker.dataset.clusterId = cluster.id;
+            
+            // 设置聚合点位置
+            marker.style.left = `${cluster.position.x}px`;
+            marker.style.top = `${cluster.position.y}px`;
+            
+            // 聚合点内容 - 显示商户数量
+            marker.textContent = cluster.count;
+            
+            return marker;
+        }
+        
+        /**
+         * 显示商户卡片
+         * @param {string} merchantId - 商户ID
+         * @description 在地图上显示选中商户的信息卡片
+         */
+        function showMerchantCard(merchantId) {
+            const merchant = allMerchants.find(m => m.id === merchantId);
+            if (!merchant) return;
+            
+            // 更新应用状态
+            appState.selectedMerchantId = merchantId;
+            
+            // 隐藏聚合列表
+            hideClusterList();
+            
+            // 更新商户卡片内容
+            updateCardContent(merchant);
+            
+            // 显示卡片
+            mapMerchantCard.classList.add('active');
+            
+            // 高亮对应的标记点
+            highlightMarker(merchantId);
+            
+            // 高亮底部列表中对应的商户项
+            highlightBottomListItem(merchantId);
+        }
+        
+        /**
+         * 更新商户卡片内容
+         * @param {Object} merchant - 商户数据
+         */
+        function updateCardContent(merchant) {
+            // 更新商户名称、类型
+            document.getElementById('card-merchant-name').textContent = merchant.name;
+            
+            const merchantType = document.getElementById('card-merchant-type');
+            if (merchant.type === 'formal') {
+                merchantType.textContent = '正式商户';
+                merchantType.className = 'px-2 py-0.5 rounded-full bg-postal-secondary text-postal-primary text-xs';
+                document.querySelector('.map-merchant-card .border-l-4').className = 'border-l-4 border-postal-primary bg-white p-4 rounded-lg';
+                document.getElementById('card-merchant-id-label').textContent = '商户号:';
+                document.getElementById('card-merchant-id').textContent = merchant.merchantId;
+            } else {
+                merchantType.textContent = '意向商户';
+                merchantType.className = 'px-2 py-0.5 rounded-full bg-postal-orangeLight text-postal-orange text-xs';
+                document.querySelector('.map-merchant-card .border-l-4').className = 'border-l-4 border-postal-orange bg-white p-4 rounded-lg';
+                document.getElementById('card-merchant-id-label').textContent = '商户来源:';
+                document.getElementById('card-merchant-id').textContent = merchant.source;
+            }
+            
+            // 更新距离和任务数
+            document.getElementById('card-distance').textContent = merchant.distance;
+            document.getElementById('card-task-count').textContent = merchant.tasks;
+            
+            // 更新任务标签
+            const tagsContainer = document.getElementById('card-task-tags');
+            tagsContainer.innerHTML = '';
+            
+            // 任务类型标签颜色映射
+            const tagColors = {
+                'supplement': { bg: 'bg-yellow-100', text: 'text-yellow-800' },
+                'switch': { bg: 'bg-blue-100', text: 'text-blue-800' },
+                'visit': { bg: 'bg-purple-100', text: 'text-purple-800' },
+                'target': { bg: 'bg-orange-100', text: 'text-orange-800' },
+                'control': { bg: 'bg-red-100', text: 'text-red-800' },
+                'account': { bg: 'bg-gray-100', text: 'text-gray-800' }
+            };
+            
+            // 添加任务标签
+            merchant.taskTypes.forEach((type, index) => {
+                const color = tagColors[type] || { bg: 'bg-gray-100', text: 'text-gray-800' };
+                tagsContainer.innerHTML += `
+                    <span class="px-2 py-1 ${color.bg} ${color.text} rounded text-xs">${merchant.taskTypeNames[index]}</span>
+                `;
+            });
+            
+            // 更新导航按钮点击事件
+            document.getElementById('card-nav-btn').onclick = () => showNavigationModal(merchant.id);
+            document.getElementById('card-details-link').onclick = (e) => {
+                e.preventDefault();
+                window.location.href = `商户任务详情页.html?id=${merchant.id}`;
+            };
+        }
+        
+    
+        /**
+         * 隐藏商户卡片
+         */
+        function hideMarkerCard() {
+            mapMerchantCard.classList.remove('active');
+            appState.selectedMerchantId = null;
+            
+            // 清除标记点高亮
+            clearMarkerHighlight();
+            // 清除底部列表项高亮
+            clearBottomListHighlight();
+        }
+        
+        /**
+         * 显示聚合列表
+         * @param {string} clusterId - 聚合点ID
+         * @param {HTMLElement} markerElement - 聚合点DOM元素
+         */
+        function showClusterList(clusterId, markerElement) {
+            const cluster = clusters.find(c => c.id === clusterId);
+            if (!cluster) return;
+            
+            // 更新应用状态
+            appState.activeClusterId = clusterId;
+            
+            // 隐藏商户卡片
+            hideMarkerCard();
+            
+            // 准备聚合列表内容
+            const clusterItemsContainer = document.getElementById('cluster-items');
+            clusterItemsContainer.innerHTML = '';
+            
+            // 根据当前的筛选条件和排序方式，获取要展示的商户
+            const clusterMerchantsFiltered = clusterMerchants
+                .filter(m => cluster.merchantIds.includes(m.id))
+                .filter(m => filterMerchant(m));
+            
+            // 添加聚合列表项
+            clusterMerchantsFiltered.forEach(merchant => {
+                const listItem = document.createElement('div');
+                listItem.className = 'p-2 hover:bg-gray-50 cursor-pointer rounded';
+                listItem.dataset.merchantId = merchant.id;
+                
+                listItem.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <div class="font-medium">${merchant.name}</div>
+                            <div class="text-xs text-gray-500">${merchant.distance} · ${merchant.tasks}个任务</div>
+                        </div>
+                        <div class="task-badge">${merchant.tasks}</div>
+                    </div>
+                `;
+                
+                // 点击事件 - 显示商户卡片
+                listItem.addEventListener('click', () => {
+                    showMerchantCard(merchant.id);
+                    hideClusterList();
+                });
+                
+                clusterItemsContainer.appendChild(listItem);
+            });
+            
+            // 设置聚合列表位置，在聚合点下方显示
+            const rect = markerElement.getBoundingClientRect();
+            const mapRect = mapContainer.getBoundingClientRect();
+            
+            clusterList.style.left = `${rect.left - mapRect.left + rect.width/2}px`;
+            clusterList.style.top = `${rect.top - mapRect.top + rect.height}px`;
+            
+            // 显示聚合列表
+            clusterList.classList.add('active');
+        }
+        
+        /**
+         * 隐藏聚合列表
+         */
+        function hideClusterList() {
+            clusterList.classList.remove('active');
+            appState.activeClusterId = null;
+        }
+        
+        /**
+         * 初始化底部列表
+         * @description 设置底部商户列表和交互
+         */
+        function initBottomList() {
+            const listContainer = document.getElementById('bottom-list-container');
+            
+            // 清空加载中状态
+            listContainer.innerHTML = '';
+            
+            // 添加商户列表项
+            renderBottomList();
+            
+            // 底部列表搜索功能
+            document.getElementById('bottom-list-search').addEventListener('input', (e) => {
+                const keyword = e.target.value.trim().toLowerCase();
+                appState.searchKeyword = keyword;
+                renderBottomList();
+            });
+            
+            // 只保留全部按钮的事件绑定
+            document.getElementById('bottom-list-filter-all').addEventListener('click', () => {
+                document.getElementById('bottom-list-filter-all').classList.add('bg-postal-primary', 'text-white');
+                document.getElementById('bottom-list-filter-all').classList.remove('bg-postal-secondary', 'text-postal-primary');
+                appState.filters.taskType = 'all';
+                renderBottomList();
+            });
+        }
+        
+        /**
+         * 渲染底部商户列表
+         * @description 根据过滤条件和排序方式渲染底部商户列表
+         */
+        function renderBottomList() {
+            const listContainer = document.getElementById('bottom-list-container');
+            
+            // 获取满足条件的商户
+            const filteredMerchants = allMerchants.filter(filterMerchant);
+            
+            // 排序商户
+            const sortedMerchants = sortMerchants(filteredMerchants);
+            
+            // 清空当前列表
+            listContainer.innerHTML = '';
+            
+            // 没有匹配的商户时显示提示
+            if (sortedMerchants.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="text-center text-gray-500 py-4">
+                        没有符合条件的商户
+                    </div>
+                `;
+                return;
+            }
+            
+            // 添加商户列表项
+            sortedMerchants.forEach(merchant => {
+                const listItem = document.createElement('div');
+                listItem.className = `merchant-item bg-white rounded-lg shadow-sm p-3 border-l-4 border-${merchant.borderColor} flex items-center`;
+                listItem.dataset.merchantId = merchant.id;
+                
+                // 根据商户类型选择样式
+                const typeClassName = merchant.type === 'formal' ? 
+                    'bg-postal-secondary text-postal-primary' : 
+                    'bg-postal-orangeLight text-postal-orange';
+                const typeName = merchant.type === 'formal' ? '正式商户' : '意向商户';
+                
+                listItem.innerHTML = `
+                    <div class="flex-grow">
+                        <div class="flex items-center">
+                            <h3 class="font-medium">${merchant.name}</h3>
+                            <span class="ml-2 px-2 py-0.5 rounded-full ${typeClassName} text-xs">${typeName}</span>
+                        </div>
+                        <p class="text-gray-500 text-sm">距离: <span class="text-black">${merchant.distance}</span></p>
+                    </div>
+                    <span class="task-badge ml-2">${merchant.tasks}</span>
+                `;
+                
+                // 高亮当前选中商户
+                if (merchant.id === appState.selectedMerchantId) {
+                    listItem.classList.add('bg-postal-light');
+                }
+                
+                // 点击事件 - 显示商户卡片
+                listItem.addEventListener('click', () => {
+                    showMerchantCard(merchant.id);
+                });
+                
+                listContainer.appendChild(listItem);
+            });
+        }
+        
+        /**
+         * 初始化底部列表拖拽功能
+         * @description 设置底部商户列表的拖拽和展开/收起功能
+         */
+        function initBottomListDrag() {
+            const bottomList = document.getElementById('bottom-merchant-list');
+            const handleBar = document.getElementById('handle-bar');
+            let startY = 0;
+            let startTransform = 0;
+            let currentTransform = 0;
+            let isDragging = false;
+            
+            // 获取屏幕高度，用于计算拖拽范围
+            const screenHeight = window.innerHeight;
+            const listHeight = bottomList.offsetHeight;
+            const minTransform = 0; // 全展开位置
+            const maxTransform = listHeight - 40; // 只露出拖动条的位置
+            const halfExpandPosition = listHeight * 0.6; // 半展开位置
+            
+            // 记录上一次的位置状态，用于点击切换
+            let lastPositionState = 'collapsed'; // 'collapsed', 'half-expanded', 'fully-expanded'
+            
+            // 鼠标/触摸开始事件
+            const startDrag = (e) => {
+                isDragging = true;
+                startY = e.type === 'mousedown' ? e.clientY : e.touches[0].clientY;
+                
+                // 获取当前transform值
+                const style = window.getComputedStyle(bottomList);
+                const transform = style.getPropertyValue('transform');
+                const matrix = new DOMMatrixReadOnly(transform);
+                startTransform = matrix.m42; // 获取Y轴位移值
+                
+                // 添加自定义位置类，禁用过渡动画
+                bottomList.classList.add('custom-position');
+                bottomList.classList.remove('half-expanded', 'fully-expanded');
+                
+                // 防止文本选择
+                document.body.style.userSelect = 'none';
+                
+                // 阻止事件冒泡，避免触发其他点击事件
+                e.stopPropagation();
+            };
+            
+            // 鼠标/触摸移动事件
+            const dragMove = (e) => {
+                if (!isDragging) return;
+                
+                const clientY = e.type === 'mousemove' ? e.clientY : e.touches[0].clientY;
+                const diffY = clientY - startY;
+                
+                // 计算新的位移值
+                currentTransform = Math.max(minTransform, Math.min(maxTransform, startTransform + diffY));
+                
+                // 应用新的位移
+                bottomList.style.transform = `translateY(${currentTransform}px)`;
+                
+                // 阻止默认行为，如页面滚动
+                e.preventDefault();
+            };
+            
+            // 鼠标/触摸结束事件
+            const endDrag = (e) => {
+                if (!isDragging) return;
+                isDragging = false;
+                
+                // 移除自定义位置类，启用过渡动画
+                bottomList.classList.remove('custom-position');
+                
+                // 确定最终位置 - 根据当前位置吸附到最近的预定位置
+                if (currentTransform < listHeight * 0.3) {
+                    // 吸附到全展开
+                    bottomList.classList.add('fully-expanded');
+                    lastPositionState = 'fully-expanded';
+                } else if (currentTransform < listHeight * 0.7) {
+                    // 吸附到半展开
+                    bottomList.classList.add('half-expanded');
+                    lastPositionState = 'half-expanded';
+                } else {
+                    // 吸附到收起
+                    bottomList.style.transform = '';
+                    lastPositionState = 'collapsed';
+                }
+                
+                // 恢复文本选择
+                document.body.style.userSelect = '';
+                
+                // 清除内联样式，让CSS类控制位置
+                if (lastPositionState !== 'collapsed') {
+                    bottomList.style.transform = '';
+                }
+            };
+            
+            // 点击拖动条时切换展开状态
+            handleBar.addEventListener('click', (e) => {
+                // 如果正在拖拽，不触发点击
+                if (isDragging) {
+                    e.stopPropagation();
+                    return;
+                }
+                
+                // 移除自定义位置样式
+                bottomList.style.transform = '';
+                
+                // 根据当前状态切换
+                switch (lastPositionState) {
+                    case 'collapsed':
+                        bottomList.classList.add('half-expanded');
+                        bottomList.classList.remove('fully-expanded');
+                        lastPositionState = 'half-expanded';
+                        break;
+                    case 'half-expanded':
+                        bottomList.classList.add('fully-expanded');
+                        bottomList.classList.remove('half-expanded');
+                        lastPositionState = 'fully-expanded';
+                        break;
+                    case 'fully-expanded':
+                        bottomList.classList.remove('fully-expanded', 'half-expanded');
+                        lastPositionState = 'collapsed';
+                        break;
+                }
+                
+                e.stopPropagation();
+            });
+            
+            // 注册桌面端事件
+            handleBar.addEventListener('mousedown', startDrag);
+            document.addEventListener('mousemove', dragMove);
+            document.addEventListener('mouseup', endDrag);
+            
+            // 注册移动端触摸事件
+            handleBar.addEventListener('touchstart', startDrag, { passive: false });
+            document.addEventListener('touchmove', dragMove, { passive: false });
+            document.addEventListener('touchend', endDrag);
+            
+            // 显示半展开状态，并高亮当前选中的商户（如果有）
+            if (appState.selectedMerchant) {
+                bottomList.classList.add('half-expanded');
+                lastPositionState = 'half-expanded';
+                highlightBottomListItem(appState.selectedMerchant);
+            }
+        }
+        
+        /**
+         * 初始化筛选功能
+         * @description 设置筛选弹窗和筛选选项
+         */
+        function initFilters() {
+            const filterBtn = document.getElementById('filterBtn');
+            const filterDrawer = document.getElementById('filterDrawer');
+            const overlay = document.getElementById('overlay');
+            const closeFilterBtn = document.getElementById('closeFilterBtn');
+            const filterApplyBtn = document.getElementById('filter-apply');
+            const filterResetBtn = document.getElementById('filter-reset');
+            
+            // 点击筛选按钮显示筛选弹窗
+            filterBtn.addEventListener('click', () => {
+                filterDrawer.classList.add('active');
+                overlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            });
+            
+            // 点击关闭按钮隐藏筛选弹窗
+            closeFilterBtn.addEventListener('click', () => {
+                filterDrawer.classList.remove('active');
+                overlay.classList.remove('active');
+                document.body.style.overflow = '';
+            });
+            
+            // 点击遮罩层关闭筛选弹窗
+            overlay.addEventListener('click', () => {
+                filterDrawer.classList.remove('active');
+                overlay.classList.remove('active');
+                document.body.style.overflow = '';
+            });
+            
+            // 点击筛选选项
+            const filterOptions = document.querySelectorAll('.filter-option');
+            filterOptions.forEach(option => {
+                option.addEventListener('click', () => {
+                    const type = option.dataset.type;
+                    const value = option.dataset.value;
+                    
+                    // 设置同组选项样式
+                    document.querySelectorAll(`.filter-option[data-type="${type}"]`).forEach(opt => {
+                        if (opt !== option) {
+                            opt.classList.remove('bg-postal-primary', 'text-white');
+                            opt.classList.add('bg-postal-secondary', 'text-postal-primary');
+                        }
+                    });
+                    
+                    // 设置当前选项样式
+                    option.classList.remove('bg-postal-secondary', 'text-postal-primary');
+                    option.classList.add('bg-postal-primary', 'text-white');
+                    
+                    // 更新临时筛选状态（应用按钮点击时才会应用）
+                    if (!option.tempFilters) option.tempFilters = {...appState.filters};
+                    option.tempFilters[type] = value;
+                });
+            });
+            
+            // 应用筛选
+            filterApplyBtn.addEventListener('click', () => {
+                // 获取当前选中的筛选条件
+                const merchantTypeOption = document.querySelector('.filter-option[data-type="merchant-type"].bg-postal-primary');
+                const taskTypeOption = document.querySelector('.filter-option[data-type="task-type"].bg-postal-primary');
+                
+                // 更新应用状态
+                appState.filters.merchantType = merchantTypeOption ? merchantTypeOption.dataset.value : 'all';
+                appState.filters.taskType = taskTypeOption ? taskTypeOption.dataset.value : 'all';
+                
+                // 重新渲染商户列表
+                renderBottomList();
+                
+                // 更新商户计数
+                updateMerchantCount();
+                
+                // 关闭筛选弹窗
+                filterDrawer.classList.remove('active');
+                overlay.classList.remove('active');
+                document.body.style.overflow = '';
+            });
+            
+            // 重置筛选
+            filterResetBtn.addEventListener('click', () => {
+                // 重置所有筛选选项样式
+                document.querySelectorAll('.filter-option[data-value="all"]').forEach(opt => {
+                    opt.classList.remove('bg-postal-secondary', 'text-postal-primary');
+                    opt.classList.add('bg-postal-primary', 'text-white');
+                });
+                
+                document.querySelectorAll('.filter-option:not([data-value="all"])').forEach(opt => {
+                    opt.classList.remove('bg-postal-primary', 'text-white');
+                    opt.classList.add('bg-postal-secondary', 'text-postal-primary');
+                });
+            });
+        }
+        
+        /**
+         * 初始化排序功能
+         * @description 设置排序下拉菜单和排序选项
+         */
+        function initSorting() {
+            const sortBtn = document.getElementById('sortBtn');
+            const sortDropdown = document.getElementById('sortDropdown');
+            const sortOptions = document.querySelectorAll('.sort-option');
+            
+            // 点击排序按钮显示下拉菜单
+            sortBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                sortDropdown.classList.toggle('hidden');
+            });
+            
+            // 点击页面其他区域关闭下拉菜单
+            document.addEventListener('click', () => {
+                sortDropdown.classList.add('hidden');
+            });
+            
+            // 点击排序选项
+            sortOptions.forEach(option => {
+                option.addEventListener('click', () => {
+                    const sort = option.dataset.sort;
+                    
+                    // 设置选项样式
+                    sortOptions.forEach(opt => {
+                        opt.classList.remove('active');
+                    });
+                    option.classList.add('active');
+                    
+                    // 更新应用状态
+                    appState.sort = sort;
+                    
+                    // 更新按钮文本
+                    sortBtn.querySelector('span').textContent = option.textContent;
+                    
+                    // 重新渲染商户列表
+                    renderBottomList();
+                });
+            });
+        }
+        
+        /**
+         * 初始化搜索功能
+         * @description 设置搜索框和搜索逻辑
+         */
+        function initSearch() {
+            const searchInput = document.getElementById('search-input');
+            
+            // 输入搜索关键词
+            searchInput.addEventListener('input', (e) => {
+                const keyword = e.target.value.trim().toLowerCase();
+                appState.searchKeyword = keyword;
+                
+                // 同步底部列表搜索框
+                document.getElementById('bottom-list-search').value = keyword;
+                
+                // 重新渲染商户列表
+                renderBottomList();
+                
+                // 更新商户计数
+                updateMerchantCount();
+            });
+        }
+        
+        /**
+         * 初始化导航功能
+         * @description 设置导航按钮和导航弹窗
+         */
+        function initNavigation() {
+            const navigationModal = document.getElementById('navigation-modal');
+            const navCancelBtn = document.getElementById('nav-cancel');
+            const navConfirmBtn = document.getElementById('nav-confirm');
+            
+            // 隐藏导航弹窗
+            navCancelBtn.addEventListener('click', () => {
+                navigationModal.classList.add('hidden');
+            });
+            
+            // 确认导航
+            navConfirmBtn.addEventListener('click', () => {
+                // 在真实应用中，这里会调用地图App进行导航
+                navigationModal.classList.add('hidden');
+                alert('已跳转到地图App进行导航');
+            });
+            
+            // 定位按钮
+            document.getElementById('locate-me').addEventListener('click', () => {
+                // 模拟定位成功
+                alert('已定位到当前位置');
+            });
+        }
+        
+        /**
+         * 显示导航弹窗
+         * @param {string} merchantId - 商户ID
+         */
+        function showNavigationModal(merchantId) {
+            const merchant = allMerchants.find(m => m.id === merchantId);
+            if (!merchant) return;
+            
+            // 更新弹窗商户名称
+            document.getElementById('nav-merchant-name').textContent = merchant.name;
+            
+            // 显示弹窗
+            document.getElementById('navigation-modal').classList.remove('hidden');
+        }
+        
+        /**
+         * 导航到商户详情页
+         * @param {string} merchantId - 商户ID
+         */
+        function navigateToDetail(merchantId) {
+            // 在真实应用中，这里会跳转到商户详情页
+            alert(`将跳转到商户ID: ${merchantId} 的详情页`);
+        }
+        
+        /**
+         * 初始化地图控件
+         * @description 设置地图缩放和重置按钮
+         */
+        function initMapControls() {
+            const zoomInBtn = document.getElementById('zoomIn');
+            const zoomOutBtn = document.getElementById('zoomOut');
+            const resetMapBtn = document.getElementById('resetMap');
+            
+            // 放大地图
+            zoomInBtn.addEventListener('click', () => {
+                appState.mapScale = Math.min(1.5, appState.mapScale + 0.1);
+                updateMapScale();
+            });
+            
+            // 缩小地图
+            zoomOutBtn.addEventListener('click', () => {
+                appState.mapScale = Math.max(0.5, appState.mapScale - 0.1);
+                updateMapScale();
+            });
+            
+            // 重置地图
+            resetMapBtn.addEventListener('click', () => {
+                appState.mapScale = 1;
+                updateMapScale();
+            });
+        }
+        
+        /**
+         * 更新地图缩放
+         * @description 根据缩放比例更新地图和标记点
+         */
+        function updateMapScale() {
+            // 在真实应用中，这里会调用地图API进行缩放
+            // 这里仅作简单模拟
+            const mapContainer = document.getElementById('map-container');
+            const svg = mapContainer.querySelector('svg');
+            
+            // 模拟缩放效果
+            svg.style.transform = `scale(${appState.mapScale})`;
+            svg.style.transformOrigin = 'center';
+        }
+        
+        /**
+         * 过滤商户
+         * @param {Object} merchant - 商户数据
+         * @return {boolean} 是否符合过滤条件
+         */
+        function filterMerchant(merchant) {
+            // 根据商户类型过滤
+            if (appState.filters.merchantType !== 'all' && merchant.type !== appState.filters.merchantType) {
+                return false;
+            }
+            
+            // 根据任务类型过滤
+            if (appState.filters.taskType !== 'all' && !merchant.taskTypes.includes(appState.filters.taskType)) {
+                return false;
+            }
+            
+            // 根据搜索关键词过滤
+            if (appState.searchKeyword) {
+                const keyword = appState.searchKeyword.toLowerCase();
+                const name = merchant.name.toLowerCase();
+                const merchantId = merchant.merchantId ? merchant.merchantId.toLowerCase() : '';
+                
+                if (!name.includes(keyword) && !merchantId.includes(keyword)) {
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+        
+        /**
+         * 排序商户
+         * @param {Array} merchants - 商户数据数组
+         * @return {Array} 排序后的商户数组
+         */
+        function sortMerchants(merchants) {
+            // 复制数组，避免修改原数组
+            const sorted = [...merchants];
+            
+            // 根据排序方式排序
+            switch(appState.sort) {
+                case 'distance':
+                    // 按距离排序
+                    sorted.sort((a, b) => {
+                        const distA = parseFloat(a.distance.replace(/[^0-9.]/g, ''));
+                        const distB = parseFloat(b.distance.replace(/[^0-9.]/g, ''));
+                        return distA - distB;
+                    });
+                    break;
+                case 'task-count':
+                    // 按任务数量排序（降序）
+                    sorted.sort((a, b) => b.tasks - a.tasks);
+                    break;
+            }
+            
+            return sorted;
+        }
+        
+        /**
+         * 高亮标记点
+         * @param {string} merchantId - 商户ID
+         */
+        function highlightMarker(merchantId) {
+            // 清除所有标记点高亮
+            clearMarkerHighlight();
+            
+            // 设置当前标记点高亮
+            const marker = document.getElementById(`marker-${merchantId}`);
+            if (marker) {
+                marker.classList.add('active');
+            }
+        }
+        
+        /**
+         * 清除标记点高亮
+         */
+        function clearMarkerHighlight() {
+            document.querySelectorAll('.map-marker').forEach(marker => {
+                marker.classList.remove('active');
+            });
+        }
+        
+        /**
+         * 高亮底部列表项
+         * @param {string} merchantId - 商户ID
+         */
+        function highlightBottomListItem(merchantId) {
+            // 清除所有列表项高亮
+            clearBottomListHighlight();
+            
+            // 设置当前列表项高亮
+            const listItem = document.querySelector(`.merchant-item[data-merchant-id="${merchantId}"]`);
+            if (listItem) {
+                listItem.classList.add('bg-postal-light');
+                
+                // 滚动到可见区域
+                listItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+        
+        /**
+         * 清除底部列表项高亮
+         */
+        function clearBottomListHighlight() {
+            document.querySelectorAll('.merchant-item').forEach(item => {
+                item.classList.remove('bg-postal-light');
+            });
+        }
+        
+        /**
+         * 更新商户计数
+         */
+        function updateMerchantCount() {
+            const filteredMerchants = allMerchants.filter(filterMerchant);
+            document.querySelector('#merchant-count span').textContent = filteredMerchants.length;
+        }
+        
+        /**
+         * DOMContentLoaded事件，初始化各项功能
+         */
+        document.addEventListener('DOMContentLoaded', function() {
+            // ... existing code ...
+            
+            // 初始化底部列表拖拽功能
+            initBottomListDrag();
+            
+            // 加载完成后，自动选择并显示最近的商户
+            showNearestMerchant();
+        });
+        
+        /**
+         * 显示最近的商户
+         * @description 自动选择距离最近的商户，并显示在地图和底部列表中
+         */
+        function showNearestMerchant() {
+            // 先按距离排序商户
+            const sortedMerchants = sortMerchants([...allMerchants]);
+            
+            if (sortedMerchants.length > 0) {
+                // 获取最近的商户
+                const nearestMerchant = sortedMerchants[0];
+                
+                // 更新应用状态
+                appState.selectedMerchant = nearestMerchant.id;
+                
+                // 显示商户卡片
+                showMerchantCard(nearestMerchant.id);
+                
+                // 显示半展开的底部列表
+                const bottomList = document.getElementById('bottom-merchant-list');
+                bottomList.classList.add('half-expanded');
+                
+                // 高亮底部列表中的商户项
+                highlightBottomListItem(nearestMerchant.id);
+            }
+        }
+    </script>
+</body>
+</html> 

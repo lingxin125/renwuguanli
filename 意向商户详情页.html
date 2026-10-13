@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>意向商户详情</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        postal: {
+                            primary: '#00963f',  // 邮政绿主色
+                            secondary: '#e8f5e9', // 浅绿色背景
+                            hover: '#007a33',    // 深绿色(悬停)
+                            light: '#f0f9f0',    // 更浅的背景色
+                            gray: '#f5f5f5',      // 灰色背景
+                            orange: '#ff9800',   // 意向商户橙色
+                            orangeLight: '#fff3e0' // 意向商户浅橙色
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f5f5f5;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        .field-group {
+            display: flex;
+            border-bottom: 1px solid #e5e5e5;
+            padding: 12px 0;
+        }
+        .field-label {
+            width: 100px;
+            color: #333;
+            font-size: 14px;
+        }
+        .field-value {
+            flex: 1;
+            color: #666;
+            font-size: 14px;
+        }
+        .card-title {
+            display: flex;
+            align-items: center;
+            padding: 15px 0;
+        }
+        .card-title::before {
+            content: "";
+            width: 3px;
+            height: 16px;
+            background-color: #00963f;
+            margin-right: 8px;
+        }
+        .required {
+            color: #f44336;
+            margin-left: 4px;
+        }
+        .btn-outline {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            color: #333;
+            border-radius: 4px;
+            padding: 8px 16px;
+            font-size: 14px;
+            margin-right: 8px;
+        }
+        .image-container {
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .image-item {
+            width: calc(50% - 4px);
+            aspect-ratio: 1 / 1;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+        }
+        .edit-link {
+            color: #00963f;
+            font-size: 14px;
+            text-decoration: none;
+        }
+    </style>
+    <link rel="stylesheet" href="mobile-shell.css">
+    <script defer src="mobile-shell.js"></script>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <header class="bg-postal-primary text-white">
+        <div class="flex items-center justify-between p-4">
+            <div class="flex items-center">
+                <a href="javascript:window.history.back()" class="mr-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </a>
+                <h1 class="text-lg font-medium">商户详情</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button class="w-6 h-6">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                    </svg>
+                </button>
+                <button class="w-6 h-6">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <circle cx="12" cy="12" r="10" stroke-width="2"/>
+                        <path d="M12 8v8M8 12h8" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 放弃商户按钮 -->
+    <div class="p-4">
+        <button class="btn-outline" onclick="abandonMerchant()">放弃商户</button>
+        <button class="btn-outline" onclick="openLinkModal()" style="background-color: #e8f5e9; color: #00963f; border-color: #00963f;">关联正式商户</button>
+    </div>
+
+    <!-- 关联正式商户模态框 -->
+    <div id="linkMerchantModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg p-6 m-4 w-full max-w-md">
+            <div class="text-center mb-6">
+                <h3 class="text-lg font-medium text-gray-900 mb-2">关联正式商户</h3>
+                <p class="text-sm text-gray-600">请输入该商户的微邮付商户号</p>
+            </div>
+            
+            <div class="space-y-4">
+                <!-- 商户号输入 -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">商户号 <span class="text-red-500">*</span></label>
+                    <input type="text" id="merchantNumberInput" placeholder="请输入商户号" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-postal-primary focus:border-transparent"
+                           oninput="validateMerchantNumber()">
+                    <div id="merchantNumberError" class="text-red-500 text-xs mt-1 hidden">请输入正确的商户号</div>
+                </div>
+                
+                <!-- 查询结果显示区域 -->
+                <div id="merchantInfoResult" class="hidden">
+                    <div class="bg-gray-50 rounded-md p-3">
+                        <div class="text-sm text-gray-700 mb-2">查询到的商户信息：</div>
+                        <div class="space-y-1">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">商户名称：</span>
+                                <span id="queriedMerchantName" class="font-medium">--</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">商户状态：</span>
+                                <span class="text-green-600 font-medium">正式商户</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">开通时间：</span>
+                                <span id="merchantOpenTime" class="text-gray-800">--</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+
+                </div>
+            </div>
+            
+            <div class="flex space-x-3 mt-6">
+                <button onclick="closeLinkModal()" 
+                        class="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">
+                    取消
+                </button>
+                <button id="queryMerchantBtn" onclick="queryMerchant()" 
+                        class="flex-1 px-4 py-2 bg-postal-primary text-white rounded-md hover:bg-postal-hover transition-colors">
+                    查询商户
+                </button>
+                <button id="confirmLinkBtn" onclick="confirmLink()" 
+                        class="flex-1 px-4 py-2 bg-postal-primary text-white rounded-md hover:bg-postal-hover transition-colors hidden">
+                    确认关联
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 关联成功提示模态框 -->
+    <div id="linkSuccessModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg p-6 m-4 w-full max-w-sm text-center">
+            <div class="mb-4">
+                <div class="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-3">
+                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">关联成功</h3>
+                <p class="text-sm text-gray-600">该商户已关联为正式商户</p>
+            </div>
+            <button onclick="handleLinkSuccess()" 
+                    class="w-full px-4 py-2 bg-postal-primary text-white rounded-md hover:bg-postal-hover transition-colors">
+                确定
+            </button>
+        </div>
+    </div>
+
+    <!-- 商户基本信息 -->
+    <div class="bg-white mb-3">
+        <div class="px-4">
+            <div class=" flex justify-between items-center">
+                <!-- 
+                    @description 商户基本信息标题，左对齐
+                 -->
+                <h3 class="card-title font-medium text-left">商户基本信息<span class="required">(必填)</span></h3>
+                <a href="#" class="edit-link">编辑更多 &gt;</a>
+            </div>
+        </div>
+        <div class="px-4">
+            <div class="field-group">
+                <div class="field-label">商户名称</div>
+                <div class="field-value">打卡打卡</div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">联系人</div>
+                <div class="field-value">打卡</div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">联系电话</div>
+                <div class="field-value">15531125665</div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">商户地址</div>
+                <div class="field-value">河北省保定市竞秀区先锋街道北门东南80米盛泰地产</div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">行业类型</div>
+                <div class="field-value">菜市场,杂货类</div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">创建时间</div>
+                <div class="field-value">2024-12-03 11:25:08</div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">转化时间</div>
+                <div class="field-value">2025-03-20 17:04:53</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 机构信息 -->
+    <div class="bg-white mb-3">
+        <div class="px-4">
+            <div class="card-title">
+                <h3 class="font-medium">机构信息</h3>
+            </div>
+        </div>
+        <div class="px-4">
+            <div class="field-group">
+                <div class="field-label">营业所</div>
+                <div class="field-value">null</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 商户照片 -->
+    <div class="bg-white mb-3">
+        <div class="px-4">
+            <div class="card-title">
+                <h3 class="font-medium">商户照片</h3>
+            </div>
+        </div>
+        <div class="px-4 pb-4">
+            <div class="flex gap-4">
+                <div class="flex-1 flex flex-col items-center justify-center bg-gray-100 rounded h-32">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11a4 4 0 01-8 0" />
+                    </svg>
+                    <span class="text-gray-400 text-xs">商户门头/收银台</span>
+                </div>
+                <div class="flex-1 flex flex-col items-center justify-center bg-gray-100 rounded h-32">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11h8m-4-4v8" />
+                    </svg>
+                    <span class="text-gray-400 text-xs">商户店内场景</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 业绩录入 -->
+    <div class="bg-white mb-3">
+        <div class="px-4">
+            <div class="card-title flex justify-between items-center">
+                <h3 class="font-medium">业绩录入</h3>
+                <a href="#" class="edit-link">编辑</a>
+            </div>
+        </div>
+        <div class="px-4 pb-4">
+            <div class="field-group">
+                <div class="field-label">业绩标题：</div>
+                <div class="field-value">意向商户走访业绩录入</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 操作人信息 -->
+    <div class="bg-white mb-3">
+        <div class="px-4">
+            <div class="card-title">
+                <h3 class="font-medium">操作人信息</h3>
+            </div>
+        </div>
+        <div class="px-4">
+            <div class="field-group">
+                <div class="field-label">操作人</div>
+                <div class="field-value">null</div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">联系方式</div>
+                <div class="field-value">null</div>
+            </div>
+            <div class="field-group">
+                <div class="field-label">操作时间</div>
+                <div class="field-value">2025-03-26 16:51:25</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 备注 -->
+    <div class="bg-white mb-20">
+        <div class="px-4">
+            <div class="card-title">
+                <h3 class="font-medium">备注</h3>
+            </div>
+        </div>
+        <div class="px-4 pb-4">
+            <div class="field-group border-b-0">
+                <div class="field-label">备注</div>
+                <div class="field-value text-gray-400">请输入备注</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部按钮 -->
+    <div class="fixed bottom-0 left-0 right-0 flex bg-white border-t border-gray-200">
+        <button class="flex-1 py-4 text-center text-gray-700 font-medium">提交</button>
+        <button class="flex-1 py-4 text-center bg-postal-primary text-white font-medium">商户进件</button>
+    </div>
+
+    <script>
+        /**
+         * @description 关联正式商户功能相关方法
+         */
+
+        // 模拟商户数据库
+        const mockMerchantData = {
+            "WYF202501001": {
+                name: "打卡打卡",
+                status: "正式商户",
+                openTime: "2024-10-15 14:30:00"
+            },
+            "WYF202501002": {
+                name: "老王便利店",
+                status: "正式商户", 
+                openTime: "2024-11-20 09:15:00"
+            },
+            "WYF202501003": {
+                name: "小李水果店",
+                status: "正式商户",
+                openTime: "2024-12-01 16:45:00"
+            }
+        };
+
+        /**
+         * 打开关联商户模态框
+         */
+        function openLinkModal() {
+            document.getElementById('linkMerchantModal').classList.remove('hidden');
+            // 重置表单状态
+            resetLinkForm();
+        }
+
+        /**
+         * 关闭关联商户模态框
+         */
+        function closeLinkModal() {
+            document.getElementById('linkMerchantModal').classList.add('hidden');
+            resetLinkForm();
+        }
+
+                 /**
+          * 重置关联表单
+          */
+         function resetLinkForm() {
+             document.getElementById('merchantNumberInput').value = '';
+             document.getElementById('merchantInfoResult').classList.add('hidden');
+             document.getElementById('merchantNumberError').classList.add('hidden');
+             document.getElementById('queryMerchantBtn').classList.remove('hidden');
+             document.getElementById('confirmLinkBtn').classList.add('hidden');
+         }
+
+        /**
+         * 验证商户号输入
+         */
+        function validateMerchantNumber() {
+            const input = document.getElementById('merchantNumberInput');
+            const errorDiv = document.getElementById('merchantNumberError');
+            const queryBtn = document.getElementById('queryMerchantBtn');
+            
+            if (input.value.trim().length >= 8) {
+                errorDiv.classList.add('hidden');
+                queryBtn.disabled = false;
+                queryBtn.classList.remove('opacity-50');
+            } else {
+                queryBtn.disabled = true;
+                queryBtn.classList.add('opacity-50');
+            }
+        }
+
+        /**
+         * 查询商户信息
+         */
+        function queryMerchant() {
+            const merchantNumber = document.getElementById('merchantNumberInput').value.trim();
+            const errorDiv = document.getElementById('merchantNumberError');
+            const resultDiv = document.getElementById('merchantInfoResult');
+            const queryBtn = document.getElementById('queryMerchantBtn');
+            const confirmBtn = document.getElementById('confirmLinkBtn');
+
+            if (!merchantNumber) {
+                showError('请输入商户号');
+                return;
+            }
+
+            // 模拟API查询
+            showMessage('正在查询商户信息...', 'info');
+            
+            setTimeout(() => {
+                const merchantData = mockMerchantData[merchantNumber];
+                
+                                 if (merchantData) {
+                     // 查询成功，显示商户信息
+                     document.getElementById('queriedMerchantName').textContent = merchantData.name;
+                     document.getElementById('merchantOpenTime').textContent = merchantData.openTime;
+                     
+                     resultDiv.classList.remove('hidden');
+                     queryBtn.classList.add('hidden');
+                     confirmBtn.classList.remove('hidden');
+                     errorDiv.classList.add('hidden');
+                     
+                     showMessage('查询成功！请确认商户信息', 'success');
+                 } else {
+                    // 查询失败
+                    errorDiv.textContent = '未找到该商户号对应的正式商户';
+                    errorDiv.classList.remove('hidden');
+                    showMessage('未找到对应的正式商户', 'error');
+                }
+            }, 1000);
+        }
+
+                 /**
+          * 确认关联
+          */
+         function confirmLink() {
+             const merchantNumber = document.getElementById('merchantNumberInput').value.trim();
+             const queriedName = document.getElementById('queriedMerchantName').textContent;
+
+             showMessage('正在关联商户...', 'info');
+
+             // 模拟API调用
+             setTimeout(() => {
+                 // 关联成功
+                 closeLinkModal();
+                 document.getElementById('linkSuccessModal').classList.remove('hidden');
+                 
+                 // 可以在这里更新页面数据
+                 console.log('关联信息:', {
+                     merchantNumber: merchantNumber,
+                     merchantName: queriedName
+                 });
+             }, 1500);
+         }
+
+        /**
+         * 处理关联成功后的操作
+         */
+        function handleLinkSuccess() {
+            document.getElementById('linkSuccessModal').classList.add('hidden');
+            
+            // 这里可以跳转到正式商户详情页或者刷新当前页面
+            showMessage('正在跳转到正式商户页面...', 'info');
+            
+            setTimeout(() => {
+                // 模拟跳转或页面更新
+                window.history.back(); // 或者跳转到正式商户详情页
+            }, 1000);
+        }
+
+        /**
+         * 放弃商户
+         */
+        function abandonMerchant() {
+            if (confirm('确定要放弃这个商户吗？')) {
+                showMessage('正在处理...', 'info');
+                setTimeout(() => {
+                    showMessage('已放弃该商户', 'success');
+                    window.history.back();
+                }, 1000);
+            }
+        }
+
+        /**
+         * 通用消息提示函数
+         */
+        function showMessage(message, type = 'info') {
+            // 创建消息提示元素
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `fixed top-20 left-1/2 transform -translate-x-1/2 z-50 px-4 py-2 rounded-md text-white text-sm transition-all duration-300`;
+            
+            switch(type) {
+                case 'success':
+                    messageDiv.classList.add('bg-green-500');
+                    break;
+                case 'error':
+                    messageDiv.classList.add('bg-red-500');
+                    break;
+                case 'info':
+                default:
+                    messageDiv.classList.add('bg-blue-500');
+                    break;
+            }
+            
+            messageDiv.textContent = message;
+            document.body.appendChild(messageDiv);
+            
+            // 3秒后自动消失
+            setTimeout(() => {
+                messageDiv.style.opacity = '0';
+                setTimeout(() => {
+                    document.body.removeChild(messageDiv);
+                }, 300);
+            }, 3000);
+        }
+
+        /**
+         * 显示错误信息
+         */
+        function showError(message) {
+            showMessage(message, 'error');
+        }
+
+        // 点击模态框外部关闭
+        document.getElementById('linkMerchantModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeLinkModal();
+            }
+        });
+
+        document.getElementById('linkSuccessModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                handleLinkSuccess();
+            }
+        });
+    </script>
+</body>
+</html> 

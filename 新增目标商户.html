@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新增目标商户</title>
+    <!-- 使用TailwindCSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        postal: {
+                            primary: '#00963f',  // 邮政绿主色
+                            secondary: '#e8f5e9', // 浅绿色背景
+                            hover: '#007a33',    // 深绿色(悬停)
+                            light: '#f0f9f0',    // 更浅的背景色
+                            gray: '#f5f5f5',      // 灰色背景
+                            orange: '#ff9800',   // 意向商户橙色
+                            orangeLight: '#fff3e0' // 意向商户浅橙色
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* 表单项动画 */
+        .form-item {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+        
+        /* 表单块样式 */
+        .form-section {
+            margin-bottom: 16px;
+            background-color: white;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        /* 必填标记样式 */
+        .required-mark {
+            color: #f44336;
+            font-weight: bold;
+            margin-left: 4px;
+        }
+        
+        /* 输入框样式 */
+        .input-style {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+            transition: all 0.3s;
+        }
+        
+        .input-style:focus {
+            outline: none;
+            border-color: #00963f;
+            box-shadow: 0 0 0 2px rgba(0, 150, 63, 0.2);
+        }
+        
+        /* 文件上传按钮样式 */
+        .file-upload {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            overflow: hidden;
+        }
+        
+        .file-upload input {
+            position: absolute;
+            font-size: 100px;
+            right: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+        
+        /* 地图标记样式 */
+        .map-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #00963f;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+    </style>
+    <link rel="stylesheet" href="mobile-shell.css">
+    <script defer src="mobile-shell.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- 顶部导航栏 -->
+    <header class="bg-postal-primary text-white shadow-md">
+        <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center w-full relative">
+                <!-- 返回按钮，点击后跳转回任务列表页（地图模式升级版）.html -->
+                <!-- 
+                    @description 返回按钮，支持根据来源页面跳转回原页面
+                    @param {string} from 来源页面文件名，通过URL参数from传递
+                    @example 新增目标商户.html?from=任务列表页（商户）.html
+                 -->
+                <button class="absolute left-0 mr-3" id="backBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <script>
+                /**
+                 * 获取URL参数
+                 * @param {string} name 参数名
+                 * @returns {string|null} 参数值
+                 */
+                function getQueryParam(name) {
+                    const url = window.location.search;
+                    const params = new URLSearchParams(url);
+                    return params.get(name);
+                }
+
+                // 返回按钮点击事件，根据from参数返回原页面，否则history.back
+                document.getElementById('backBtn').onclick = function() {
+                    const from = getQueryParam('from');
+                    if (from) {
+                        window.location.href = decodeURIComponent(from);
+                    } else {
+                        window.history.back();
+                    }
+                }
+                </script>
+                <h1 class="text-xl font-medium w-full text-center">商户详情</h1>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button class="p-1 rounded-full hover:bg-postal-hover transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要内容区域 -->
+    <div class="container mx-auto px-4 py-4">
+        <!-- 商户基本信息模块 -->
+        <div class="form-section mb-4">
+            <div class="border-l-4 border-postal-primary pl-3 mb-4">
+                <h2 class="text-lg font-medium">商户基本信息<span class="text-red-500">(必填)</span></h2>
+            </div>
+            
+            <!-- 商户名称 -->
+            <div class="mb-4 form-item">
+                <label class="block text-gray-700 text-sm font-medium mb-2">
+                    商户名称
+                </label>
+                <input type="text" placeholder="请输入商户名称" class="input-style" required>
+            </div>
+            
+            <!-- 联系人 -->
+            <div class="mb-4 form-item">
+                <label class="block text-gray-700 text-sm font-medium mb-2">
+                    联系人
+                </label>
+                <input type="text" placeholder="请输入联系人" class="input-style" required>
+            </div>
+            
+            <!-- 联系电话 -->
+            <div class="mb-4 form-item">
+                <label class="block text-gray-700 text-sm font-medium mb-2">
+                    联系电话
+                </label>
+                <input type="tel" placeholder="请输入联系电话" class="input-style" required>
+            </div>
+            
+            <!-- 商户地址 -->
+            <div class="mb-4 form-item">
+                <label class="block text-gray-700 text-sm font-medium mb-2">
+                    商户地址
+                </label>
+                <div class="flex">
+                    <input type="text" placeholder="请手动定位地址" class="input-style rounded-r-none flex-grow" required>
+                    <button class="map-icon rounded-r-md px-3 py-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 行业参考 -->
+            <div class="mb-0 form-item">
+                <label class="block text-gray-700 text-sm font-medium mb-2">
+                    行业参考
+                </label>
+                <input type="text" placeholder="请输入行业参考(例:餐饮)" class="input-style" required>
+            </div>
+        </div>
+        
+        <!-- 打卡照片模块 -->
+        <div class="form-section mb-4">
+            <div class="border-l-4 border-postal-primary pl-3 mb-4">
+                <h2 class="text-lg font-medium">打卡照片<span class="text-red-500">(必填)</span></h2>
+            </div>
+            
+            <!-- 上传店铺门头照 -->
+            <div class="mb-2 form-item">
+                <div class="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-6 text-center">
+                    <div class="mb-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M3 19h18M13 5v14m-6-8h12M7 19h2m8 0h2M5 7v12m0-8h14m0 8V7M5 7h14" />
+                        </svg>
+                        <p class="text-gray-500 mt-2 text-sm">落地门头照</p>
+                    </div>
+                    
+                    <div class="file-upload">
+                        <button class="px-4 py-2 bg-postal-secondary text-postal-primary text-sm rounded-full hover:bg-opacity-80 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                            上传照片
+                        </button>
+                        <input type="file" accept="image/*" capture="camera">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 备注模块 -->
+        <div class="form-section">
+            <div class="border-l-4 border-postal-primary pl-3 mb-4">
+                <h2 class="text-lg font-medium">备注</h2>
+            </div>
+            
+            <!-- 备注文本框 -->
+            <div class="form-item">
+                <textarea placeholder="请输入备注" class="input-style min-h-[100px] resize-none"></textarea>
+            </div>
+        </div>
+        
+        <!-- 底部按钮 -->
+        <div class="fixed bottom-0 left-0 right-0 bg-white shadow-lg p-4 flex space-x-4">
+            <button class="flex-1 py-3 bg-gray-200 text-gray-700 rounded-full text-sm hover:bg-gray-300 transition-colors">
+                仅打卡
+            </button>
+            <button class="flex-1 py-3 bg-postal-primary text-white rounded-full text-sm hover:bg-postal-hover transition-colors">
+                意向商户转化
+            </button>
+        </div>
+        
+        <!-- 底部间距，避免内容被按钮遮挡 -->
+        <div class="h-20"></div>
+    </div>
+
+    <!-- JavaScript 脚本 -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 返回按钮事件
+            document.querySelector('button[onclick]').addEventListener('click', function(e) {
+                e.preventDefault();
+                window.location.href = '任务列表页（地图模式升级版）.html';
+            });
+            
+            // 地图按钮点击事件
+            document.querySelector('.map-icon').addEventListener('click', function() {
+                alert('打开地图选点功能，请选择商户位置');
+            });
+            
+            // 照片上传事件
+            document.querySelector('input[type="file"]').addEventListener('change', function(e) {
+                if (e.target.files && e.target.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        // 创建图片预览
+                        const previewContainer = document.querySelector('.bg-gray-50');
+                        previewContainer.innerHTML = `
+                            <div class="relative">
+                                <img src="${e.target.result}" class="w-full h-48 object-cover rounded">
+                                <button class="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="file-upload mt-3">
+                                <button class="px-4 py-2 bg-postal-secondary text-postal-primary text-sm rounded-full hover:bg-opacity-80 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                    </svg>
+                                    重新上传
+                                </button>
+                                <input type="file" accept="image/*" capture="camera">
+                            </div>
+                        `;
+                        
+                        // 添加删除按钮事件
+                        const deleteBtn = previewContainer.querySelector('.absolute button');
+                        deleteBtn.addEventListener('click', function() {
+                            previewContainer.innerHTML = `
+                                <div class="mb-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M3 19h18M13 5v14m-6-8h12M7 19h2m8 0h2M5 7v12m0-8h14m0 8V7M5 7h14" />
+                                    </svg>
+                                    <p class="text-gray-500 mt-2 text-sm">落地门头照</p>
+                                </div>
+                                
+                                <div class="file-upload">
+                                    <button class="px-4 py-2 bg-postal-secondary text-postal-primary text-sm rounded-full hover:bg-opacity-80 transition-colors">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                        </svg>
+                                        上传照片
+                                    </button>
+                                    <input type="file" accept="image/*" capture="camera">
+                                </div>
+                            `;
+                        });
+                    }
+                    reader.readAsDataURL(e.target.files[0]);
+                }
+            });
+            
+            // 底部按钮事件
+            document.querySelectorAll('.fixed button').forEach(button => {
+                button.addEventListener('click', function() {
+                    const requiredFields = document.querySelectorAll('input[required]');
+                    let allFilled = true;
+                    
+                    requiredFields.forEach(field => {
+                        if (!field.value) {
+                            allFilled = false;
+                            field.classList.add('border-red-500');
+                        } else {
+                            field.classList.remove('border-red-500');
+                        }
+                    });
+                    
+                    if (allFilled) {
+                        alert('提交成功，返回任务列表页');
+                        window.location.href = '任务列表页（地图模式升级版）.html';
+                    } else {
+                        alert('请填写所有必填项');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html> 

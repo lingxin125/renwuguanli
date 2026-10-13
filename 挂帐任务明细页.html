@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>挂帐任务处理 - 任务管理系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        postal: {
+                            primary: '#00963f',  // 邮政绿主色
+                            secondary: '#e8f5e9', // 浅绿色背景
+                            hover: '#007a33',    // 深绿色(悬停)
+                            light: '#f0f9f0',    // 更浅的背景色
+                            gray: '#f5f5f5',      // 灰色背景
+                            orange: '#ff9800',   // 意向商户商户橙色
+                            orangeLight: '#fff3e0' // 意向商户商户浅橙色
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f8fafc;
+            font-family: system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
+        }
+        
+        .container {
+            max-width: 100%;
+            padding: 0 1rem;
+        }
+        
+        @media (min-width: 640px) {
+            .container {
+                max-width: 640px;
+                padding: 0 1.5rem;
+            }
+        }
+        
+        @media (min-width: 768px) {
+            .container {
+                max-width: 768px;
+            }
+        }
+        
+        @media (min-width: 1024px) {
+            .container {
+                max-width: 1024px;
+            }
+        }
+        
+        @media (min-width: 1280px) {
+            .container {
+                max-width: 1280px;
+            }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* 上传文件列表样式 */
+        .file-info {
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .file-name {
+            font-weight: 500;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        
+        .file-size {
+            font-size: 0.75rem;
+            color: #718096;
+        }
+        
+        .file-actions {
+            margin-left: auto;
+        }
+        
+        /* 单选框组样式 */
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        
+        .radio-item {
+            display: flex;
+            padding: 1rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .radio-item:hover {
+            border-color: #cbd5e0;
+            background-color: #f8fafc;
+        }
+        
+        .radio-item.selected {
+            border-color: #00963f;
+            background-color: #e8f5e9;
+        }
+        
+        .radio-item input[type="radio"] {
+            margin-right: 0.75rem;
+            width: 1.25rem;
+            height: 1.25rem;
+            accent-color: #00963f;
+        }
+        
+        .radio-content {
+            flex: 1;
+        }
+        
+        .radio-title {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+        
+        .radio-description {
+            font-size: 0.875rem;
+            color: #718096;
+        }
+        
+        /* 文件上传区域样式 */
+        .upload-area {
+            border: 2px dashed #cbd5e0;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .upload-area:hover {
+            border-color: #00963f;
+            background-color: rgba(0, 150, 63, 0.02);
+        }
+        
+        .upload-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            margin-top: 0.5rem;
+            background-color: #f8fafc;
+        }
+        
+        .file-icon {
+            margin-right: 0.75rem;
+        }
+        
+        /* 确认模态框样式 */
+        #submit-confirm-modal {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        
+        #submit-confirm-modal.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        #submit-confirm-modal .bg-white {
+            transform: translateY(20px);
+            transition: transform 0.3s ease;
+        }
+        
+        #submit-confirm-modal.active .bg-white {
+            transform: translateY(0);
+        }
+        
+        /* 文件预览模态框样式 */
+        #file-preview-modal {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        
+        #file-preview-modal.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        #file-preview-modal .bg-white {
+            transform: translateY(20px);
+            transition: transform 0.3s ease;
+        }
+        
+        #file-preview-modal.active .bg-white {
+            transform: translateY(0);
+        }
+        
+        .file-preview-content {
+            max-height: 70vh;
+            overflow: auto;
+        }
+        
+        .file-preview-image {
+            max-width: 100%;
+            max-height: 60vh;
+            object-fit: contain;
+        }
+        
+        .file-actions-enhanced {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+    </style>
+    <link rel="stylesheet" href="mobile-shell.css">
+    <script defer src="mobile-shell.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- 确认提交弹窗 -->
+    <div id="submit-confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 opacity-0 pointer-events-none transition-opacity">
+        <div class="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4 transform transition-transform">
+            <h3 class="text-lg font-medium mb-4">确认提交</h3>
+            <p class="text-gray-600 mb-6">确定要提交此挂帐任务处理结果吗？提交后将无法修改。</p>
+            <div class="flex justify-end gap-3">
+                <button id="cancel-submit-btn" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                    取消
+                </button>
+                <button id="confirm-submit-btn" class="px-4 py-2 bg-postal-primary text-white rounded-lg hover:bg-postal-hover transition-colors">
+                    确认提交
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- 文件预览弹窗 -->
+    <div id="file-preview-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 opacity-0 pointer-events-none transition-opacity">
+        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 transform transition-transform">
+            <div class="flex justify-between items-center p-4 border-b">
+                <h3 id="preview-file-name" class="text-lg font-medium">文件预览</h3>
+                <button id="close-preview-btn" class="text-gray-500 hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="file-preview-content p-4">
+                <div id="preview-content" class="flex justify-center items-center">
+                    <!-- 预览内容将在这里动态加载 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 顶部导航栏 -->
+    <header class="bg-postal-primary text-white shadow-md">
+        <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center w-full relative">
+                <button class="absolute left-0 mr-3" onclick="window.history.back()">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <h1 class="text-xl font-medium w-full text-center">挂帐任务处理</h1>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button class="p-1 rounded-full hover:bg-postal-hover transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要内容区域 -->
+    <div class="container mx-auto px-4 py-4 pb-20">
+        <!-- 商户基本信息卡片 -->
+        <div class="bg-white rounded-lg shadow-sm p-4 mb-4 border-l-4 border-postal-primary fade-in">
+            <div class="flex justify-between">
+                <div class="w-full pr-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <h2 class="font-medium text-xl">好利来蛋糕店</h2>
+                        <button id="share-merchant-btn" class="flex items-center text-postal-primary hover:text-postal-hover transition-colors text-sm">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+                            </svg>
+                            分享给商户
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-2">
+                        <div class="text-sm col-span-2 flex items-center">
+                            <svg class="w-4 h-4 text-postal-primary mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h.01M7 13h10M7 17h6"/></svg>
+                            <span class="text-gray-500">商户号：</span>
+                            <span class="ml-1">1234567890</span>
+                        </div>
+                        <div class="text-sm col-span-2 flex items-center">
+                            <svg class="w-4 h-4 text-postal-primary mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-7 8-7s8 3 8 7"/></svg>
+                            <span class="text-gray-500">负责人：</span>
+                            <span class="ml-1">张经理</span>
+                        </div>
+                        <div class="text-sm col-span-2 flex items-center">
+                            <svg class="w-4 h-4 text-postal-primary mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="7" y="4" width="10" height="16" rx="2"/><circle cx="12" cy="18" r="1"/></svg>
+                            <span class="text-gray-500">联系电话：</span>
+                            <span class="ml-1">13588888888</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 挂帐任务详情 -->
+        <div class="bg-white rounded-lg shadow-sm p-4 mb-4 fade-in">
+            <h3 class="font-medium text-[20px] mb-4 flex items-center">
+                
+                挂帐任务详情
+            </h3>
+            
+            <div class="border-b border-gray-200 pb-3 mb-3">
+                <div class="mb-2">
+                    <span class="text-gray-500 text-sm">当前通道：</span>
+                    <span class="text-sm">随行付</span>
+                </div>
+                <div class="mb-2">
+                    <span class="text-gray-500 text-sm">挂帐类型：</span>
+                    <span class="text-sm">结算账户异常</span>
+                </div>
+                <div class="mb-2">
+                    <span class="text-gray-500 text-sm">挂帐金额：</span>
+                    <span class="text-sm">10000</span>
+                </div>
+                <div class="mb-2">
+                    <span class="text-gray-500 text-sm">挂帐笔数：</span>
+                    <span class="text-sm">3</span>
+                </div>
+                <div class="mb-2">
+                    <span class="text-gray-500 text-sm">挂帐日期：</span>
+                    <span class="text-sm">2024-07-25 10:30:25</span>
+                </div>
+                <div class="mb-2">
+                    <span class="text-gray-500 text-sm">下发日期：</span>
+                    <span class="text-sm ">2024-07-26 10:30:25</span>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <h4 class="font-medium text-base mb-2">挂帐原因</h4>
+                <div class="bg-gray-50 p-3 rounded-lg text-sm">
+                    <ol class="list-decimal pl-5 mt-2 space-y-1">
+                        <li>商户结算卡无法正常结算资金</li>
+                        <li>Ⅱ、Ⅲ类户年累计交易金额超限</li>
+                    </ol>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <h4 class="font-medium text-base mb-2">解决建议</h4>
+                <div class="bg-postal-light p-3 rounded-lg text-sm">
+                    <p>请按照以下步骤处理：</p>
+                    <ol class="list-decimal pl-5 mt-2 space-y-1">
+                        <li>根据具体情况选择合适的解决方案</li>
+                        <li>可选择二类卡升级</li>
+                        <li>可选择修改结算卡</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- 解决方案选择 -->
+        <div class="bg-white rounded-lg shadow-sm p-4 mb-4 fade-in">
+            <h3 class="font-medium text-[20px] mb-4">挂帐任务处理</h3>
+            
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-medium mb-2">
+                    请选择合适的挂帐解决方案 <span class="text-red-500">*</span>
+                </label>
+                <select id="solution-select" class="w-full border-gray-300 rounded-md shadow-sm p-3 focus:border-postal-primary focus:ring focus:ring-postal-primary focus:ring-opacity-20">
+                    <option value="" selected disabled>请选择解决方案</option>
+                    <option value="card_upgrade">二类卡升级</option>
+                    <option value="cancel_refund">注销退汇</option>
+                    <option value="change_account">修改结算卡</option>
+                </select>
+            </div>
+        </div>
+        
+        <!-- 二类卡升级表单 -->
+        <div id="form-card-upgrade" class="bg-white rounded-lg shadow-sm p-4 mb-4 fade-in hidden">
+            <h3 class="font-medium text-lg mb-4 flex items-center">
+                <span class="w-2 h-2 bg-postal-primary rounded-full mr-2"></span>
+                说明
+            </h3>
+            <div class="bg-postal-light p-3 rounded-lg mb-4">
+                <p class="text-sm text-gray-600">客户经理确认已为商户操作升级二类卡，再进行提交补付</p>
+            </div>
+        </div>
+
+        <!-- 注销退汇表单 -->
+        <div id="form-cancel-refund" class="bg-white rounded-lg shadow-sm p-4 mb-4 fade-in hidden">
+            <h3 class="font-medium text-lg mb-4 flex items-center">
+                <span class="w-2 h-2 bg-orange-500 rounded-full mr-2"></span>
+                注销退汇处理
+            </h3>
+            
+            <div class="mb-4">
+                <h4 class="font-medium text-base mb-3">新结算账户信息</h4>
+                <div class="space-y-3">
+                    <div class="flex items-center">
+                        <label class="w-24 text-sm text-gray-700 flex-shrink-0">新结算户名</label>
+                        <input type="text" class="flex-1 border-gray-300 rounded-md shadow-sm p-3 focus:border-postal-primary focus:ring focus:ring-postal-primary focus:ring-opacity-20" placeholder="请输入新结算户名">
+                        <span class="text-red-500 ml-1">*</span>
+                    </div>
+                    <div class="flex items-center">
+                        <label class="w-24 text-sm text-gray-700 flex-shrink-0">新结算证件号</label>
+                        <input type="text" class="flex-1 border-gray-300 rounded-md shadow-sm p-3 focus:border-postal-primary focus:ring focus:ring-postal-primary focus:ring-opacity-20" placeholder="请输入新结算证件号">
+                        <span class="text-red-500 ml-1">*</span>
+                    </div>
+                    <div class="flex items-center">
+                        <label class="w-24 text-sm text-gray-700 flex-shrink-0">新银行卡号</label>
+                        <input type="text" class="flex-1 border-gray-300 rounded-md shadow-sm p-3 focus:border-postal-primary focus:ring focus:ring-postal-primary focus:ring-opacity-20" placeholder="请输入新银行卡号">
+                        <span class="text-red-500 ml-1">*</span>
+                    </div>
+                    <div class="flex items-center">
+                        <label class="w-24 text-sm text-gray-700 flex-shrink-0">开户行</label>
+                        <input type="text" class="flex-1 border-gray-300 rounded-md shadow-sm p-3 focus:border-postal-primary focus:ring focus:ring-postal-primary focus:ring-opacity-20" placeholder="请输入开户行">
+                        <span class="text-red-500 ml-1">*</span>
+                    </div>
+                    <div class="flex items-center">
+                        <label class="w-24 text-sm text-gray-700 flex-shrink-0">开户支行</label>
+                        <input type="text" class="flex-1 border-gray-300 rounded-md shadow-sm p-3 focus:border-postal-primary focus:ring focus:ring-postal-primary focus:ring-opacity-20" placeholder="请输入开户支行">
+                        <span class="text-red-500 ml-1">*</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <h4 class="font-medium text-base mb-3">上传证明材料</h4>
+                
+                <div class="space-y-4">
+                    <!-- 银行卡照片 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">银行卡卡号面照片 <span class="text-red-500">*</span></label>
+                        <div class="upload-area" id="bankcard-upload-area">
+                            <div class="flex flex-col items-center justify-center">
+                                <svg class="w-10 h-10 text-gray-400 mb-2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"></path>
+                                </svg>
+                                <p class="text-sm text-gray-500">点击上传银行卡照片</p>
+                                <p class="text-xs text-gray-400 mt-1">支持 jpg, png 格式，最大5MB</p>
+                            </div>
+                            <input type="file" class="hidden" id="bankcard-file-input" accept=".jpg,.png">
+                        </div>
+                        <div id="bankcard-file-list" class="mt-2"></div>
+                    </div>
+                    
+                    <!-- 身份证正面 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">结算人身份证正面 <span class="text-red-500">*</span></label>
+                        <div class="upload-area" id="idcard-front-upload-area">
+                            <div class="flex flex-col items-center justify-center">
+                                <svg class="w-10 h-10 text-gray-400 mb-2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"></path>
+                                </svg>
+                                <p class="text-sm text-gray-500">点击上传身份证正面</p>
+                                <p class="text-xs text-gray-400 mt-1">支持 jpg, png 格式，最大5MB</p>
+                            </div>
+                            <input type="file" class="hidden" id="idcard-front-file-input" accept=".jpg,.png">
+                        </div>
+                        <div id="idcard-front-file-list" class="mt-2"></div>
+                    </div>
+                    
+                    <!-- 身份证反面 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">结算人身份证反面 <span class="text-red-500">*</span></label>
+                        <div class="upload-area" id="idcard-back-upload-area">
+                            <div class="flex flex-col items-center justify-center">
+                                <svg class="w-10 h-10 text-gray-400 mb-2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"></path>
+                                </svg>
+                                <p class="text-sm text-gray-500">点击上传身份证反面</p>
+                                <p class="text-xs text-gray-400 mt-1">支持 jpg, png 格式，最大5MB</p>
+                            </div>
+                            <input type="file" class="hidden" id="idcard-back-file-input" accept=".jpg,.png">
+                        </div>
+                        <div id="idcard-back-file-list" class="mt-2"></div>
+                    </div>
+                    
+                    <!-- 其他附件 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">其他可协助证明的附件 <span class="text-gray-500 text-xs">(选填)</span></label>
+                        <div class="upload-area" id="refund-other-upload-area">
+                            <div class="flex flex-col items-center justify-center">
+                                <svg class="w-10 h-10 text-gray-400 mb-2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"></path>
+                                </svg>
+                                <p class="text-sm text-gray-500">点击上传其他附件</p>
+                                <p class="text-xs text-gray-400 mt-1">支持 jpg, png, pdf 格式，最大5MB</p>
+                            </div>
+                            <input type="file" class="hidden" id="refund-other-file-input" accept=".jpg,.png,.pdf" multiple>
+                        </div>
+                        <div id="refund-other-file-list" class="mt-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 修改结算卡表单 -->
+        <div id="form-change-account" class="bg-white rounded-lg shadow-sm p-4 mb-4 fade-in hidden">
+            <h3 class="font-medium text-lg mb-4 flex items-center">
+                <span class="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                修改结算卡处理
+            </h3>
+            
+            <div class="mb-4">
+                <h4 class="font-medium text-base mb-3">原结算账户信息</h4>
+                <div class="space-y-3">
+                    <div class="flex items-center">
+                        <label class="w-24 text-sm text-gray-700 flex-shrink-0">原结算卡号</label>
+                        <input type="text" id="original-card-number" class="flex-1 border-gray-300 rounded-md shadow-sm p-3 bg-gray-100 focus:border-postal-primary focus:ring focus:ring-postal-primary focus:ring-opacity-20" value="6228480086543210987" readonly>
+                    </div>
+                    <div class="flex items-center">
+                        <label class="w-24 text-sm text-gray-700 flex-shrink-0">原结算户名</label>
+                        <input type="text" id="original-account-name" class="flex-1 border-gray-300 rounded-md shadow-sm p-3 bg-gray-100 focus:border-postal-primary focus:ring focus:ring-postal-primary focus:ring-opacity-20" value="张经理" readonly>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <h4 class="font-medium text-base mb-3">新结算账户信息</h4>
+                <div class="space-y-3">
+                    <div class="flex items-center">
+                        <label class="w-24 text-sm text-gray-700 flex-shrink-0">新结算户名</label>
+                        <input type="text" class="flex-1 border-gray-300 rounded-md shadow-sm p-3 focus:border-postal-primary focus:ring focus:ring-postal-primary focus:ring-opacity-20" placeholder="请输入新结算户名">
+                        <span class="text-red-500 ml-1">*</span>
+                    </div>
+                    <div class="flex items-center">
+                        <label class="w-24 text-sm text-gray-700 flex-shrink-0">新结算证件号</label>
+                        <input type="text" class="flex-1 border-gray-300 rounded-md shadow-sm p-3 focus:border-postal-primary focus:ring focus:ring-postal-primary focus:ring-opacity-20" placeholder="请输入新结算证件号">
+                        <span class="text-red-500 ml-1">*</span>
+                    </div>
+                    <div class="flex items-center">
+                        <label class="w-24 text-sm text-gray-700 flex-shrink-0">新银行卡号</label>
+                        <input type="text" class="flex-1 border-gray-300 rounded-md shadow-sm p-3 focus:border-postal-primary focus:ring focus:ring-postal-primary focus:ring-opacity-20" placeholder="请输入新银行卡号">
+                        <span class="text-red-500 ml-1">*</span>
+                    </div>
+                    <div class="flex items-center">
+                        <label class="w-24 text-sm text-gray-700 flex-shrink-0">开户行</label>
+                        <input type="text" class="flex-1 border-gray-300 rounded-md shadow-sm p-3 focus:border-postal-primary focus:ring focus:ring-postal-primary focus:ring-opacity-20" placeholder="请输入开户行">
+                        <span class="text-red-500 ml-1">*</span>
+                    </div>
+                    <div class="flex items-center">
+                        <label class="w-24 text-sm text-gray-700 flex-shrink-0">开户支行</label>
+                        <input type="text" class="flex-1 border-gray-300 rounded-md shadow-sm p-3 focus:border-postal-primary focus:ring focus:ring-postal-primary focus:ring-opacity-20" placeholder="请输入开户支行">
+                        <span class="text-red-500 ml-1">*</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <h4 class="font-medium text-base mb-3">上传证明材料</h4>
+                
+                <div class="space-y-4">
+                    <!-- 银行卡照片 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">银行卡卡号面照片 <span class="text-red-500">*</span></label>
+                        <div class="upload-area" id="change-bankcard-upload-area">
+                            <div class="flex flex-col items-center justify-center">
+                                <svg class="w-10 h-10 text-gray-400 mb-2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"></path>
+                                </svg>
+                                <p class="text-sm text-gray-500">点击上传银行卡照片</p>
+                                <p class="text-xs text-gray-400 mt-1">支持 jpg, png 格式，最大5MB</p>
+                            </div>
+                            <input type="file" class="hidden" id="change-bankcard-file-input" accept=".jpg,.png">
+                        </div>
+                        <div id="change-bankcard-file-list" class="mt-2"></div>
+                    </div>
+                    
+                    <!-- 身份证正面 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">结算人身份证正面 <span class="text-red-500">*</span></label>
+                        <div class="upload-area" id="change-idcard-front-upload-area">
+                            <div class="flex flex-col items-center justify-center">
+                                <svg class="w-10 h-10 text-gray-400 mb-2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"></path>
+                                </svg>
+                                <p class="text-sm text-gray-500">点击上传身份证正面</p>
+                                <p class="text-xs text-gray-400 mt-1">支持 jpg, png 格式，最大5MB</p>
+                            </div>
+                            <input type="file" class="hidden" id="change-idcard-front-file-input" accept=".jpg,.png">
+                        </div>
+                        <div id="change-idcard-front-file-list" class="mt-2"></div>
+                    </div>
+                    
+                    <!-- 身份证反面 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">结算人身份证反面 <span class="text-red-500">*</span></label>
+                        <div class="upload-area" id="change-idcard-back-upload-area">
+                            <div class="flex flex-col items-center justify-center">
+                                <svg class="w-10 h-10 text-gray-400 mb-2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"></path>
+                                </svg>
+                                <p class="text-sm text-gray-500">点击上传身份证反面</p>
+                                <p class="text-xs text-gray-400 mt-1">支持 jpg, png 格式，最大5MB</p>
+                            </div>
+                            <input type="file" class="hidden" id="change-idcard-back-file-input" accept=".jpg,.png">
+                        </div>
+                        <div id="change-idcard-back-file-list" class="mt-2"></div>
+                    </div>
+                    
+                    <!-- 其他附件 -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">其他可协助证明的附件 <span class="text-gray-500 text-xs">(选填)</span></label>
+                        <div class="upload-area" id="change-other-upload-area">
+                            <div class="flex flex-col items-center justify-center">
+                                <svg class="w-10 h-10 text-gray-400 mb-2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"></path>
+                                </svg>
+                                <p class="text-sm text-gray-500">点击上传其他附件</p>
+                                <p class="text-xs text-gray-400 mt-1">支持 jpg, png, pdf 格式，最大5MB</p>
+                            </div>
+                            <input type="file" class="hidden" id="change-other-file-input" accept=".jpg,.png,.pdf" multiple>
+                        </div>
+                        <div id="change-other-file-list" class="mt-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 备注说明 -->
+        <div class="bg-white rounded-lg shadow-sm p-4 mb-4 fade-in">
+            <h3 class="font-medium text-[20px] mb-4">备注说明</h3>
+
+            <div class="mb-4">
+                  <textarea 
+                    class="w-full border-gray-300 rounded-md shadow-sm p-3 focus:border-postal-primary focus:ring focus:ring-postal-primary focus:ring-opacity-20" 
+                    rows="4" 
+                    placeholder="如有需要，请在此处备注说明"
+                ></textarea>
+            </div>
+        </div>
+        
+        
+        
+        
+       
+       
+
+        
+   
+        
+        
+    </div>
+
+    <!-- 底部固定操作栏 -->
+    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 py-3 px-4">
+        <div class="container mx-auto flex items-center justify-center">
+            
+            <button id="submit-btn" class="w-full bg-postal-primary text-white py-3 rounded-lg font-medium hover:bg-postal-hover transition-colors">
+                提交
+            </button>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * 初始化页面交互功能
+         * @returns {void}
+         */
+        function initPage() {
+            // 解决方案选择逻辑
+            const solutionSelect = document.getElementById('solution-select');
+            const formCardUpgrade = document.getElementById('form-card-upgrade');
+            const formCancelRefund = document.getElementById('form-cancel-refund');
+            const formChangeAccount = document.getElementById('form-change-account');
+            
+            if (solutionSelect) {
+                solutionSelect.addEventListener('change', function() {
+                    const value = this.value;
+                    
+                    // 隐藏所有表单
+                    if (formCardUpgrade) formCardUpgrade.classList.add('hidden');
+                    if (formCancelRefund) formCancelRefund.classList.add('hidden');
+                    if (formChangeAccount) formChangeAccount.classList.add('hidden');
+                    
+                    // 根据选择显示对应的表单
+                    if (value === 'card_upgrade' && formCardUpgrade) {
+                        formCardUpgrade.classList.remove('hidden');
+                    } else if (value === 'cancel_refund' && formCancelRefund) {
+                        formCancelRefund.classList.remove('hidden');
+                        // 设置注销退汇相关的文件上传
+                        setupFileUpload('bankcard-upload-area', 'bankcard-file-input', 'bankcard-file-list');
+                        setupFileUpload('idcard-front-upload-area', 'idcard-front-file-input', 'idcard-front-file-list');
+                        setupFileUpload('idcard-back-upload-area', 'idcard-back-file-input', 'idcard-back-file-list');
+                        setupFileUpload('refund-other-upload-area', 'refund-other-file-input', 'refund-other-file-list');
+                    } else if (value === 'change_account' && formChangeAccount) {
+                        formChangeAccount.classList.remove('hidden');
+                        // 设置修改结算卡相关的文件上传
+                        setupFileUpload('change-bankcard-upload-area', 'change-bankcard-file-input', 'change-bankcard-file-list');
+                        setupFileUpload('change-idcard-front-upload-area', 'change-idcard-front-file-input', 'change-idcard-front-file-list');
+                        setupFileUpload('change-idcard-back-upload-area', 'change-idcard-back-file-input', 'change-idcard-back-file-list');
+                        setupFileUpload('change-other-upload-area', 'change-other-file-input', 'change-other-file-list');
+                    }
+                });
+            }
+            
+            // 文件预览模态框关闭事件
+            const previewModal = document.getElementById('file-preview-modal');
+            const closePreviewBtn = document.getElementById('close-preview-btn');
+            
+            if (closePreviewBtn) {
+                closePreviewBtn.addEventListener('click', () => {
+                    previewModal.classList.remove('active');
+                });
+            }
+            
+            // 点击模态框背景关闭
+            if (previewModal) {
+                previewModal.addEventListener('click', (e) => {
+                    if (e.target === previewModal) {
+                        previewModal.classList.remove('active');
+                    }
+                });
+            }
+            
+            // 提交确认弹窗逻辑
+            const submitBtn = document.getElementById('submit-btn');
+            const confirmModal = document.getElementById('submit-confirm-modal');
+            const cancelSubmitBtn = document.getElementById('cancel-submit-btn');
+            const confirmSubmitBtn = document.getElementById('confirm-submit-btn');
+            
+            if (submitBtn && confirmModal) {
+                submitBtn.addEventListener('click', () => {
+                    confirmModal.classList.add('active');
+                });
+            }
+            
+            if (cancelSubmitBtn && confirmModal) {
+                cancelSubmitBtn.addEventListener('click', () => {
+                    confirmModal.classList.remove('active');
+                });
+            }
+            
+            if (confirmSubmitBtn) {
+                confirmSubmitBtn.addEventListener('click', () => {
+                    // 提交表单的逻辑
+                    // 模拟提交成功后跳转
+                    setTimeout(() => {
+                        alert('挂帐任务已成功提交');
+                        window.location.href = '任务列表页.html';
+                    }, 1000);
+                });
+            }
+
+            // 简化的分享功能
+            const shareMerchantBtn = document.getElementById('share-merchant-btn');
+            
+            if (shareMerchantBtn) {
+                shareMerchantBtn.addEventListener('click', function() {
+                    // 生成分享链接并复制到剪贴板
+                    const taskId = '挂帐任务_' + Date.now();
+                    const shareLink = `${window.location.origin}/shared/pending-task?id=${taskId}&merchant=好利来蛋糕店`;
+                    
+                    // 创建临时输入框来复制文本
+                    const tempInput = document.createElement('input');
+                    tempInput.value = shareLink;
+                    document.body.appendChild(tempInput);
+                    tempInput.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(tempInput);
+                    
+                    // 显示成功提示
+                    alert('复制成功，链接有三天有效期，请尽快分享商户');
+                });
+            }
+        }
+        
+        /**
+         * 设置文件上传功能
+         * @param {string} areaId - 上传区域DOM元素ID
+         * @param {string} inputId - 文件输入DOM元素ID
+         * @param {string} listId - 文件列表DOM元素ID
+         * @returns {void}
+         */
+        function setupFileUpload(areaId, inputId, listId) {
+            console.log(`设置文件上传: ${areaId}, ${inputId}, ${listId}`);
+            const uploadArea = document.getElementById(areaId);
+            const fileInput = document.getElementById(inputId);
+            const fileList = document.getElementById(listId);
+            
+            console.log('元素查找结果:', {
+                uploadArea: !!uploadArea,
+                fileInput: !!fileInput,
+                fileList: !!fileList
+            });
+            
+            if (!uploadArea || !fileInput || !fileList) {
+                console.error(`文件上传元素未找到: ${areaId}, ${inputId}, ${listId}`);
+                return; // 如果元素不存在，直接返回
+            }
+            
+            console.log('开始绑定事件...');
+            
+            uploadArea.addEventListener('click', (e) => {
+                console.log('上传区域被点击');
+                e.preventDefault();
+                e.stopPropagation();
+                fileInput.click();
+            });
+            
+            fileInput.addEventListener('change', (e) => {
+                console.log('文件选择事件触发，文件数量:', e.target.files.length);
+                if (e.target.files.length > 0) {
+                    // 处理多个文件
+                    Array.from(e.target.files).forEach(file => {
+                        console.log('处理文件:', file.name);
+                        handleFileUpload(file, fileList);
+                    });
+                    // 清空input，允许重复选择相同文件
+                    e.target.value = '';
+                }
+            });
+            
+            // 拖放文件上传
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('border-postal-primary');
+                uploadArea.style.backgroundColor = 'rgba(0, 150, 63, 0.05)';
+            });
+            
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('border-postal-primary');
+                uploadArea.style.backgroundColor = '';
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('border-postal-primary');
+                uploadArea.style.backgroundColor = '';
+                
+                if (e.dataTransfer.files.length > 0) {
+                    // 处理多个拖拽文件
+                    Array.from(e.dataTransfer.files).forEach(file => {
+                        handleFileUpload(file, fileList);
+                    });
+                }
+            });
+        }
+        
+        /**
+         * 处理文件上传并显示在列表中
+         * @param {File} file - 上传的文件对象
+         * @param {HTMLElement} fileList - 文件列表DOM元素
+         * @returns {void}
+         */
+        function handleFileUpload(file, fileList) {
+            // 检查文件类型和大小
+            const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+            const maxSize = 5 * 1024 * 1024; // 5MB
+            
+            if (!validTypes.includes(file.type)) {
+                alert('请上传有效的文件类型 (jpg, png, pdf)');
+                return;
+            }
+            
+            if (file.size > maxSize) {
+                alert('文件大小不能超过5MB');
+                return;
+            }
+            
+            // 检查是否已存在相同文件名
+            const existingFiles = fileList.querySelectorAll('.file-name');
+            for (let existingFile of existingFiles) {
+                if (existingFile.textContent === file.name) {
+                    alert('文件已存在，请选择其他文件');
+                    return;
+                }
+            }
+            
+            // 创建文件项
+            const fileItem = document.createElement('div');
+            fileItem.className = 'upload-item';
+            
+            // 生成唯一ID
+            const fileId = 'file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            fileItem.setAttribute('data-file-id', fileId);
+            
+            // 设置图标（根据文件类型）
+            let fileIcon;
+            if (file.type === 'application/pdf') {
+                fileIcon = '<svg class="w-5 h-5 text-postal-primary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>';
+            } else {
+                fileIcon = '<svg class="w-5 h-5 text-postal-primary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>';
+            }
+            
+            // 格式化文件大小
+            const formatFileSize = (bytes) => {
+                if (bytes < 1024) return bytes + ' B';
+                else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+                else return (bytes / 1048576).toFixed(1) + ' MB';
+            };
+            
+            // 构建文件项 HTML
+            fileItem.innerHTML = `
+                <div class="file-icon">${fileIcon}</div>
+                <div class="file-info">
+                    <div class="file-name">${file.name}</div>
+                    <div class="file-size">${formatFileSize(file.size)}</div>
+                </div>
+                <div class="file-actions-enhanced">
+                    <button class="text-postal-primary hover:text-postal-hover" onclick="previewFile('${fileId}')" title="预览">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                        </svg>
+                    </button>
+                    <button class="text-red-500 hover:text-red-700" onclick="removeFile(this)" title="删除">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                    </button>
+                </div>
+            `;
+            
+            // 存储文件对象到DOM元素
+            fileItem.fileObject = file;
+            
+            fileList.appendChild(fileItem);
+        }
+        
+        /**
+         * 移除上传的文件
+         * @param {HTMLElement} button - 删除按钮DOM元素
+         * @returns {void}
+         */
+        function removeFile(button) {
+            const fileItem = button.closest('.upload-item');
+            if (confirm('确定要删除这个文件吗？')) {
+                fileItem.remove();
+            }
+        }
+        
+        /**
+         * 预览文件
+         * @param {string} fileId - 文件ID
+         * @returns {void}
+         */
+        function previewFile(fileId) {
+            const fileItem = document.querySelector(`[data-file-id="${fileId}"]`);
+            if (!fileItem || !fileItem.fileObject) {
+                alert('文件不存在');
+                return;
+            }
+            
+            const file = fileItem.fileObject;
+            const modal = document.getElementById('file-preview-modal');
+            const previewContent = document.getElementById('preview-content');
+            const fileName = document.getElementById('preview-file-name');
+            
+            fileName.textContent = file.name;
+            
+            // 清空预览内容
+            previewContent.innerHTML = '';
+            
+            if (file.type.startsWith('image/')) {
+                // 图片预览
+                const img = document.createElement('img');
+                img.className = 'file-preview-image';
+                img.src = URL.createObjectURL(file);
+                img.onload = () => URL.revokeObjectURL(img.src); // 释放内存
+                previewContent.appendChild(img);
+            } else if (file.type === 'application/pdf') {
+                // PDF预览
+                const iframe = document.createElement('iframe');
+                iframe.src = URL.createObjectURL(file);
+                iframe.style.width = '100%';
+                iframe.style.height = '60vh';
+                iframe.style.border = 'none';
+                iframe.onload = () => URL.revokeObjectURL(iframe.src); // 释放内存
+                previewContent.appendChild(iframe);
+            } else {
+                // 不支持的文件类型
+                previewContent.innerHTML = `
+                    <div class="text-center py-8">
+                        <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <p class="text-gray-500">此文件类型不支持预览</p>
+                        <p class="text-sm text-gray-400 mt-2">文件名：${file.name}</p>
+                        <p class="text-sm text-gray-400">文件大小：${formatFileSize(file.size)}</p>
+                    </div>
+                `;
+            }
+            
+            modal.classList.add('active');
+        }
+        
+        /**
+         * 格式化文件大小
+         * @param {number} bytes - 文件大小（字节）
+         * @returns {string} 格式化后的文件大小
+         */
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            else return (bytes / 1048576).toFixed(1) + ' MB';
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 延迟一点时间确保所有元素都已渲染
+            setTimeout(initPage, 100);
+        });
+    </script>
+</body>
+</html> 

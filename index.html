@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#087954">
+  <title>统一作战地图 · 邮付管家</title>
+  <style>
+    :root{--green:#087954;--ink:#18352a;--muted:#6b7e75;--line:#dcebe2}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:"Microsoft YaHei","PingFang SC",sans-serif;color:var(--ink)}
+    body{background:radial-gradient(circle at 50% 0,#e9f8ef 0,#f4f8f5 42%,#e8efeb 100%);padding:28px 18px}
+    .portal{width:min(760px,100%);margin:0 auto}.brand{color:var(--green);font-size:12px;font-weight:700;letter-spacing:.16em}.hero{margin-top:12px;padding:30px 28px;border-radius:22px;background:linear-gradient(135deg,#075d40,#087954 66%,#35b875);color:#fff;box-shadow:0 18px 40px #075d4026}.hero h1{margin:8px 0 10px;font-size:clamp(27px,6vw,40px);line-height:1.25}.hero p{margin:0;max-width:600px;color:#e8fff1;line-height:1.75}.entries{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px}.entry{display:flex;flex-direction:column;min-height:185px;padding:22px;text-decoration:none;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 10px 24px #17352a0c;transition:transform .18s,box-shadow .18s,border-color .18s}.entry:hover{transform:translateY(-3px);border-color:#91cfaa;box-shadow:0 16px 30px #17352a18}.icon{width:42px;height:42px;display:grid;place-items:center;border-radius:13px;background:#e4f6eb;color:var(--green);font-size:22px}.entry h2{margin:17px 0 6px;font-size:18px}.entry p{margin:0;color:var(--muted);font-size:13px;line-height:1.65}.arrow{margin-top:auto;padding-top:16px;color:var(--green);font-size:13px;font-weight:650}.footer{margin-top:20px;color:var(--muted);font-size:12px;text-align:center}
+    @media(max-width:560px){body{padding:18px 14px}.hero{padding:25px 21px;border-radius:18px}.entries{grid-template-columns:1fr}.entry{min-height:150px}.entry h2{margin-top:13px}}
+  </style>
+</head>
+<body>
+  <main class="portal">
+    <div class="brand">微邮付 / 邮付管家</div>
+    <section class="hero"><div>统一作战地图</div><h1>商户地图工作台</h1><p>从地图查找商户、查看分布、导航到店，并快速进入商户详情和任务处理页面。</p></section>
+    <nav class="entries" aria-label="统一作战地图入口">
+      <a class="entry" href="商户地图.html"><span class="icon" aria-hidden="true">⌖</span><h2>查看统一作战地图</h2><p>进入移动端地图原型，体验搜索、筛选、热力、点位、聚合下钻和商户卡片。</p><span class="arrow">进入原型 →</span></a>
+      <a class="entry" href="../docs/商户地图技术评审PRD.html"><span class="icon" aria-hidden="true">▤</span><h2>查看产品需求文档</h2><p>查看商户地图的背景、业务目标、功能逻辑、页面流程和评审确认事项。</p><span class="arrow">阅读 PRD →</span></a>
+    </nav>
+    <div class="footer">移动端评审入口 · 原型与产品需求文档</div>
+  </main>
+</body>
+</html>

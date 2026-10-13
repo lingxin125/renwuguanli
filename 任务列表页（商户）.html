@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>任务管理系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        postal: {
+                            primary: '#00963f',  // 邮政绿主色
+                            secondary: '#e8f5e9', // 浅绿色背景
+                            hover: '#007a33',    // 深绿色(悬停)
+                            light: '#f0f9f0',    // 更浅的背景色
+                            gray: '#f5f5f5',      // 灰色背景
+                            orange: '#ff9800',   // 意向商户商户橙色
+                            orangeLight: '#fff3e0' // 意向商户商户浅橙色
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(100%); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .merchant-item {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+        
+        /* 筛选弹出框样式 */
+        .filter-drawer {
+            display: none;
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: white;
+            border-radius: 16px 16px 0 0;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 50;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .filter-drawer.active {
+            display: block;
+            animation: slideUp 0.3s ease-out forwards;
+        }
+        
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 40;
+        }
+        
+        .overlay.active {
+            display: block;
+        }
+        
+        /* 任务数量红点样式 */
+        .task-badge {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 20px;
+            height: 20px;
+            background-color: #ff3b30;
+            color: white;
+            border-radius: 10px;
+            padding: 0 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* 任务领取确认弹窗样式 */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        
+        .modal-backdrop.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .modal-content {
+            background-color: white;
+            border-radius: 8px;
+            width: 85%;
+            max-width: 400px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(20px);
+            transition: transform 0.3s;
+            overflow: hidden;
+        }
+        
+        .modal-backdrop.active .modal-content {
+            transform: translateY(0);
+        }
+        
+        .modal-header {
+            border-bottom: 1px solid #eee;
+            padding: 16px 20px;
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .modal-footer {
+            border-top: 1px solid #eee;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+        
+        /* 响应式设计优化 */
+        @media (max-width: 640px) {
+            .modal-content {
+                width: 95%;
+            }
+            
+            .merchant-item {
+                padding: 12px;
+            }
+            
+            .sort-option {
+                padding: 10px;
+            }
+            
+            .filter-drawer {
+                max-height: 90vh;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .tab-btn {
+                padding-left: 4px;
+                padding-right: 4px;
+            }
+            
+            .segment-btn {
+                font-size: 0.75rem;
+            }
+            
+            .merchant-item h3 {
+                font-size: 1rem;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="mobile-shell.css">
+    <script defer src="mobile-shell.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- 领取任务确认弹窗 -->
+    <div id="task-confirm-modal" class="modal-backdrop">
+        <div class="modal-content">
+            <div class="modal-header flex items-center">
+                <div class="w-10 h-10 rounded-full bg-postal-secondary flex items-center justify-center mr-3">
+                    <svg class="w-6 h-6 text-postal-primary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-medium text-gray-900">确认领取商户</h3>
+            </div>
+            <div class="modal-body">
+                <p class="text-gray-700 mb-4">领取后，该商户下<span class="text-postal-primary font-bold">所有任务</span>将由您负责。</p>
+                <div class="bg-postal-light p-3 rounded-lg mb-2">
+                    <div class="flex items-start">
+                        <svg class="w-5 h-5 text-postal-primary mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <p class="text-sm text-gray-600">请在3天内处理至少1个任务，逾期将失效，需重新领取商户。</p>
+                    </div>
+                </div>
+                <div class="flex items-center text-sm mt-4">
+                    <div id="merchant-name-display" class="font-medium"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancel-task-btn" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                    取消
+                </button>
+                <a href="商户任务详情页.html" id="confirm-task-btn" class="px-4 py-2 bg-postal-primary text-white rounded-lg hover:bg-postal-hover transition-colors">
+                    确认
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 顶部导航栏 -->
+    <header class="bg-postal-primary text-white shadow-md">
+        <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center w-full relative">
+                <!--
+                    返回按钮，点击后跳转回任务类型选择页.html
+                    @description 跳转到任务类型选择页
+                 -->
+                <button class="absolute left-0 mr-3" id="backToTypeBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <script>
+                /**
+                 * 返回按钮点击事件，跳转到任务类型选择页.html
+                 */
+                document.getElementById('backToTypeBtn').onclick = function() {
+                    window.location.href = '任务类型选择页.html';
+                }
+                </script>
+                <h1 class="text-xl font-medium w-full text-center">任务管理</h1>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button class="p-1 rounded-full hover:bg-postal-hover transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                </button>
+                <button class="p-1 rounded-full hover:bg-postal-hover transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="bg-white shadow-sm sticky top-0 z-10">
+        <div class="container mx-auto p-4">
+            <div class="relative flex">
+                <div class="relative flex-grow">
+                    <input type="text" placeholder="搜索商户名称或商户号" class="w-full pl-10 pr-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-postal-primary focus:border-transparent transition-all">
+                    <div class="absolute left-3 top-2.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                </div>
+                <!-- 筛选按钮 - 更新为面性图标 -->
+                <button id="filterBtn" class="ml-2 p-2 text-postal-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M4.25 5.61C6.57 8.59 10 13 10 13v6c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-6s3.43-4.41 5.75-7.39c.51-.66.04-1.61-.8-1.61H5.04c-.83 0-1.3.95-.79 1.61z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- 排序选项 -->
+    <div class="bg-white border-b border-gray-200 shadow-sm">
+        <div class="container mx-auto px-4 py-2">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center relative space-x-2">
+                    <div class="relative">
+                        <button id="sortBtn" class="flex items-center text-sm px-3 py-1.5 border border-gray-300 rounded-full hover:bg-gray-50 transition-colors">
+                            <span class="mr-1">距离商户由近及远</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <!-- 排序下拉菜单 -->
+                        <div id="sortDropdown" class="hidden absolute left-0 top-full mt-1 bg-white shadow-lg rounded-lg z-20 w-32 py-1 border border-gray-200">
+                            <div class="cursor-pointer px-4 py-2 hover:bg-gray-100 text-sm sort-option active" data-sort="task-count">距离商户由近及远</div>
+                            <div class="cursor-pointer px-4 py-2 hover:bg-gray-100 text-sm sort-option" data-sort="update-time">待办任务数量降序</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 视图切换按钮组，已移到最右侧 -->
+                <div class="flex bg-gray-100 p-0.5 rounded-full">
+                    <button id="listViewBtn" class="flex items-center justify-center px-3 py-1.5 rounded-full bg-white text-postal-primary text-sm shadow-sm transition-all focus:outline-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                        列表模式
+                    </button>
+                    <a href="任务列表页（地图模式升级版）.html" id="mapViewBtn" class="flex items-center justify-center px-3 py-1.5 rounded-full text-gray-600 hover:bg-gray-50 text-sm transition-all focus:outline-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                        </svg>
+                        地图模式
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- 商户任务tab页签 -->
+    <!--
+        @component 商户任务tab页签
+        @description 分为"待领取"和"已领取"，并统计数量，风格与整体统一
+    -->
+    <div class="bg-white border-b border-gray-200 shadow-sm">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-center w-full pt-2 pb-0">
+                <button id="tab-todo" class="tab-btn flex-1 max-w-xs text-postal-primary font-medium px-6 py-3 border-b-2 border-postal-primary focus:outline-none text-center">
+                    待领取 <span id="count-todo" class="text-postal-primary">（0）</span>
+                </button>
+                <button id="tab-done" class="tab-btn flex-1 max-w-xs text-gray-500 font-medium px-6 py-3 border-b-2 border-transparent hover:text-postal-primary focus:outline-none text-center">
+                    已领取 <span id="count-done" class="text-gray-500">（0）</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 分段控制器 (仅在已领取tab下显示) -->
+    <div id="segment-control-container" class="hidden">
+        <div class="bg-white shadow-sm">
+            <div class="container mx-auto">
+                <div id="segment-control" class="py-3 px-4">
+                    <div class="bg-gray-100 rounded-lg p-1 flex relative overflow-hidden">
+                        <!-- 滑动背景指示器 -->
+                        <div id="segment-indicator" class="absolute top-1 left-1 bottom-1 rounded-md bg-white shadow-sm transition-all duration-300 ease-in-out" style="width: 50%;"></div>
+                        
+                        <!-- 进行中 -->
+                        <button id="segment-inprogress" data-index="0" class="segment-btn flex-1 py-1.5 rounded-md text-sm font-medium z-10 flex items-center justify-center relative transition-colors duration-200 text-postal-primary">
+                            <!-- 进行中图标 -->
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                            进行中 <span id="count-inprogress" class="ml-1">(0)</span>
+                        </button>
+                        
+                        <!-- 已完成 -->
+                        <button id="segment-completed" data-index="1" class="segment-btn flex-1 py-1.5 rounded-md text-sm font-medium z-10 flex items-center justify-center relative transition-colors duration-200 text-gray-500">
+                            <!-- 已完成图标 -->
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                            已完成 <span id="count-completed" class="ml-1">(0)</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 商户任务列表 -->
+    <div class="container mx-auto px-4 py-4 pb-8">
+        <div id="merchant-list" class="space-y-3"></div>
+    </div>
+
+    <!-- 筛选弹框 -->
+    <div id="overlay" class="overlay"></div>
+    <div id="filterDrawer" class="filter-drawer">
+        <div class="p-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-medium text-lg">筛选条件</h3>
+                <button id="closeFilterBtn" class="text-gray-500 hover:text-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="border-b border-gray-200 py-3">
+                <h4 class="font-medium mb-3">任务类型</h4>
+                <div class="flex flex-wrap gap-2">
+                    <button class="px-3 py-1 rounded-full bg-postal-primary text-white text-sm">全部</button>
+                    <button class="px-3 py-1 rounded-full bg-postal-secondary text-postal-primary text-sm">合并补充资料</button>
+                    <button class="px-3 py-1 rounded-full bg-postal-secondary text-postal-primary text-sm">切换备用通道</button>
+                    <button class="px-3 py-1 rounded-full bg-postal-secondary text-postal-primary text-sm">走访维护商户</button>
+                    <button class="px-3 py-1 rounded-full bg-postal-secondary text-postal-primary text-sm">目标商户走访</button>
+                    <button class="px-3 py-1 rounded-full bg-postal-secondary text-postal-primary text-sm">风控处理</button>
+                    <button class="px-3 py-1 rounded-full bg-postal-secondary text-postal-primary text-sm">挂帐处理</button>
+                </div>
+            </div>
+            
+            
+            <div class="flex space-x-3 mt-5">
+                <button class="flex-1 py-2 bg-gray-200 text-gray-700 rounded-full text-sm hover:bg-gray-300 transition-colors">重置</button>
+                <button class="flex-1 py-2 bg-postal-primary text-white rounded-full text-sm hover:bg-postal-hover transition-colors">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript 功能 -->
+    <script>
+        /**
+         * 初始化页面交互功能
+         */
+        document.addEventListener('DOMContentLoaded', function() {
+            // 筛选按钮点击效果
+            const filterBtn = document.getElementById('filterBtn');
+            const filterDrawer = document.getElementById('filterDrawer');
+            const overlay = document.getElementById('overlay');
+            const closeFilterBtn = document.getElementById('closeFilterBtn');
+            
+            // 点击筛选按钮显示下拉框
+            filterBtn.addEventListener('click', function() {
+                filterDrawer.classList.add('active');
+                overlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            });
+            
+            // 点击关闭按钮隐藏下拉框
+            closeFilterBtn.addEventListener('click', function() {
+                filterDrawer.classList.remove('active');
+                overlay.classList.remove('active');
+                document.body.style.overflow = '';
+            });
+            
+            // 点击遮罩层关闭筛选框
+            overlay.addEventListener('click', function() {
+                filterDrawer.classList.remove('active');
+                overlay.classList.remove('active');
+                document.body.style.overflow = '';
+            });
+
+            // 筛选选项按钮点击效果
+            const filterOptionBtns = document.querySelectorAll('.filter-drawer button.rounded-full');
+            filterOptionBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // 找到当前组内的所有按钮
+                    const parent = this.closest('div.border-b');
+                    const btnsInGroup = parent.querySelectorAll('button.rounded-full');
+                    
+                    // 重置当前组内所有按钮
+                    btnsInGroup.forEach(b => {
+                        if(b !== this) {
+                            b.classList.remove('bg-postal-primary', 'text-white');
+                            b.classList.add('bg-postal-secondary', 'text-postal-primary');
+                        }
+                    });
+                    
+                    // 设置当前按钮
+                    this.classList.remove('bg-postal-secondary', 'text-postal-primary');
+                    this.classList.add('bg-postal-primary', 'text-white');
+                });
+            });
+
+            // 排序按钮点击效果
+            const sortBtn = document.getElementById('sortBtn');
+            const sortDropdown = document.getElementById('sortDropdown');
+            const sortOptions = document.querySelectorAll('.sort-option');
+            
+            // 点击排序按钮显示/隐藏下拉框
+            sortBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                sortDropdown.classList.toggle('hidden');
+            });
+            
+            // 点击排序选项
+            sortOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    // 移除所有选项的active类
+                    sortOptions.forEach(opt => opt.classList.remove('active'));
+                    // 给当前选项添加active类
+                    this.classList.add('active');
+                    // 更新排序按钮显示的文本
+                    sortBtn.querySelector('span').textContent = this.textContent;
+                    // 隐藏下拉框
+                    sortDropdown.classList.add('hidden');
+                });
+            });
+            
+            // 点击页面其他区域关闭排序下拉框
+            document.addEventListener('click', function() {
+                sortDropdown.classList.add('hidden');
+            });
+
+            // 商户卡片点击效果
+            const merchantItems = document.querySelectorAll('.merchant-item');
+            merchantItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    // 模拟点击详情按钮，实际项目中应该跳转到详情页
+                    const detailBtn = this.querySelector('button');
+                    if(detailBtn) {
+                        detailBtn.classList.add('bg-postal-hover');
+                        setTimeout(() => {
+                            detailBtn.classList.remove('bg-postal-hover');
+                        }, 200);
+                    }
+                });
+            });
+
+            // 搜索框效果
+            const searchInput = document.querySelector('input[type="text"]');
+            searchInput.addEventListener('focus', function() {
+                this.parentElement.classList.add('ring-2', 'ring-postal-primary');
+            });
+            
+            searchInput.addEventListener('blur', function() {
+                this.parentElement.classList.remove('ring-2', 'ring-postal-primary');
+            });
+
+            // 视图切换按钮效果
+            const listViewBtn = document.getElementById('listViewBtn');
+            const mapViewBtn = document.getElementById('mapViewBtn');
+            
+            // 列表按钮已处于活跃状态，无需额外处理
+            
+            // 地图按钮点击添加过渡效果
+            mapViewBtn.addEventListener('mousedown', function() {
+                this.classList.add('bg-gray-200');
+            });
+            
+            mapViewBtn.addEventListener('mouseup', function() {
+                this.classList.remove('bg-gray-200');
+            });
+
+            // // 任务类型多选互斥逻辑
+            // const taskTypeBtns = document.querySelectorAll('.border-b:has(h4:contains("任务类型")) button');
+            // let taskTypeAllBtn = null;
+            // taskTypeBtns.forEach(btn => {
+            //     if(btn.textContent.trim() === '全部') taskTypeAllBtn = btn;
+            //     btn.addEventListener('click', function() {
+            //         if(this.textContent.trim() === '全部') {
+            //             // 选中全部，取消其他
+            //             taskTypeBtns.forEach(b => {
+            //                 if(b !== this) b.classList.remove('bg-postal-primary', 'text-white');
+            //             });
+            //             this.classList.add('bg-postal-primary', 'text-white');
+            //         } else {
+            //             // 选中/取消当前
+            //             this.classList.toggle('bg-postal-primary');
+            //             this.classList.toggle('text-white');
+            //             // 取消全部
+            //             if(taskTypeAllBtn) taskTypeAllBtn.classList.remove('bg-postal-primary', 'text-white');
+            //         }
+            //     });
+            // });
+        });
+
+        /**
+         * 商户任务数据（模拟）
+         * @typedef {Object} Merchant
+         * @property {string} id - 商户ID
+         * @property {string} name - 商户名称
+         * @property {string} merchantId - 商户号
+         * @property {string} distance - 距离，如"约0.1km"
+         * @property {number} tasks - 任务数量
+         * @property {('todo'|'done')} status - 商户状态：待领取/已领取
+         * @property {string[]} taskTags - 任务类型标签
+         * @property {boolean} [soonExpired] - 是否有任务即将超时，仅对已领取商户有效
+         * @property {boolean} [rejected] - 是否有驳回任务，仅对已领取商户有效
+         * @property {boolean} [completed] - 是否已完成所有任务
+         * @property {string} [completedTime] - 完成时间，格式为YYYY-MM-DD
+         */
+        
+        /**
+         * 商户任务数据（模拟）
+         * @type {Merchant[]}
+         */
+        const merchants = [
+            { id: '1', name: '好利来蛋糕店', merchantId: '1234567890', distance: '约0.1km', tasks: 3, status: 'todo', taskTags: ['补充资料', '切换备用通道', '走访维护商户'] },
+            { id: '2', name: '小张杂货铺', merchantId: '9876543210', distance: '约1.1km', tasks: 2, status: 'done', taskTags: ['补充资料', '切换备用通道'], soonExpired: true },
+            { id: '3', name: '全家便利店', merchantId: '5463728190', distance: '约2.1km', tasks: 1, status: 'todo', taskTags: ['走访维护商户'] },
+            { id: '4', name: '星巴克咖啡', merchantId: '3726495108', distance: '约1.5km', tasks: 2, status: 'done', taskTags: ['补充资料', '风控处理'], rejected: true },
+            { id: '5', name: '沙县小吃', merchantId: '6521739408', distance: '约0.8km', tasks: 1, status: 'todo', taskTags: ['挂账处理'] },
+            { id: '6', name: '瑞幸咖啡', merchantId: '8888888888', distance: '约0.5km', tasks: 4, status: 'done', taskTags: ['补充资料', '走访维护商户'], soonExpired: true },
+            { id: '7', name: '麦当劳', merchantId: '1357908642', distance: '约2.3km', tasks: 0, status: 'done', taskTags: ['补充资料', '风控处理'], completed: true, completedTime: '2024-07-15' },
+            { id: '8', name: '肯德基', merchantId: '2468013579', distance: '约1.8km', tasks: 0, status: 'done', taskTags: ['补充资料', '走访维护商户'], completed: true, completedTime: '2024-07-10' },
+            { id: '9', name: '必胜客', merchantId: '9753124680', distance: '约0.9km', tasks: 0, status: 'done', taskTags: ['走访维护商户'], completed: true, completedTime: '2024-07-18' }
+        ];
+
+        /**
+         * 渲染商户列表
+         * @param {'todo'|'done'} tab - 主tab页签，待领取/已领取
+         * @param {'inprogress'|'completed'} segment - 分段器选择，进行中/已完成，仅当tab=done时有效
+         * @returns {void}
+         */
+        function renderMerchantList(tab, segment = 'inprogress') {
+            const list = document.getElementById('merchant-list');
+            list.innerHTML = '';
+            
+            // 根据tab筛选商户
+            let filtered = [];
+            
+            if (tab === 'todo') {
+                // 待领取tab，显示未领取的商户
+                filtered = merchants.filter(m => m.status === 'todo');
+                
+                // 控制分段器显示/隐藏
+                document.getElementById('segment-control-container').classList.add('hidden');
+            } else if (tab === 'done') {
+                // 已领取tab，根据segment进一步筛选
+                document.getElementById('segment-control-container').classList.remove('hidden');
+                
+                if (segment === 'inprogress') {
+                    // 进行中分段，显示已领取但未完成的商户，即status=done且completed不为true
+                    // 按优先级排序：即将失效 > 驳回 > 正常进行中
+                    filtered = merchants.filter(m => m.status === 'done' && !m.completed)
+                        .sort((a, b) => {
+                            // 优先级1：即将失效标志排序
+                            if (a.soonExpired && !b.soonExpired) return -1;
+                            if (!a.soonExpired && b.soonExpired) return 1;
+                            
+                            // 优先级2：如果二者即将失效状态相同，按驳回状态排序
+                            if (a.soonExpired === b.soonExpired) {
+                                if (a.rejected && !b.rejected) return -1;
+                                if (!a.rejected && b.rejected) return 1;
+                            }
+                            
+                            // 优先级3：如果二者即将失效和驳回状态都相同，则按照距离排序
+                            return parseFloat(a.distance.replace(/[^\d.]/g, '')) - parseFloat(b.distance.replace(/[^\d.]/g, ''));
+                        });
+                } else if (segment === 'completed') {
+                    // 已完成分段，显示已完成的商户，默认按完成时间降序排序
+                    filtered = merchants.filter(m => m.status === 'done' && m.completed)
+                        .sort((a, b) => new Date(b.completedTime) - new Date(a.completedTime));
+                }
+            }
+            
+            filtered.forEach(m => {
+                /**
+                 * 构建商户卡片DOM
+                 */
+                const card = document.createElement('div');
+                
+                // 卡片高亮样式
+                let cardClass = 'merchant-item bg-white rounded-lg shadow-sm p-4 border-l-4 border-postal-primary transform hover:shadow-md transition-all';
+                
+                // 即将失效卡片高亮
+                if (tab === 'done' && segment === 'inprogress' && m.soonExpired) {
+                    cardClass = 'merchant-item bg-orange-50 rounded-lg shadow-sm p-4 border border-orange-400 transform hover:shadow-md transition-all';
+                }
+                
+                // 已完成卡片简洁样式
+                if (tab === 'done' && segment === 'completed') {
+                    cardClass = 'merchant-item bg-white rounded-lg shadow-sm p-4 border-l-4 border-postal-primary transform hover:shadow-md transition-all';
+                }
+                
+                card.className = cardClass + ' relative';
+                card.dataset.merchantId = m.id;
+                card.dataset.merchantName = m.name;
+                
+                // 不同分段的卡片内容不同
+                if (tab === 'done' && segment === 'completed') {
+                    // 已完成分段的卡片，内容更简洁
+                    card.innerHTML = `
+                        <div class="pr-16">
+                            <div class="flex items-center space-x-2">
+                                <h3 class="font-medium text-lg truncate">${m.name}</h3>
+                            </div>
+                            <span class="text-gray-500 text-sm mt-1">商户号:</span>
+                            <span class="text-black text-sm ml-1">${m.merchantId}</span><br>
+                            <span class="text-gray-500 text-sm mt-2">任务数:</span>
+                            <span class="text-black text-sm ml-1">4</span>
+                            <div class="mt-1">
+                               
+                                <p class="text-gray-500 text-sm">完成时间: <span class="text-black">${m.completedTime}</span></p>
+                                <div class="mt-3 flex flex-wrap gap-2">
+                                    ${m.taskTags.map(tag => {
+                                        let color = 'bg-yellow-100 text-yellow-800';
+                                        if(tag === '切换备用通道') color = 'bg-blue-100 text-blue-800';
+                                        else if(tag === '走访维护商户') color = 'bg-purple-100 text-purple-800';
+                                        else if(tag === '风控处理') color = 'bg-red-100 text-red-600';
+                                        else if(tag === '挂账处理') color = 'bg-orange-100 text-orange-800';
+                                        return `<span class="px-2 py-1 ${color} rounded text-xs">${tag}</span>`;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="absolute top-1/2 right-4 transform -translate-y-1/2">
+                            <a href="商户任务详情页.html" class="flex items-center justify-center w-12 h-12 rounded-full hover:bg-gray-100 transition-colors" title="查看详情">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </a>
+                        </div>
+                    `;
+                } else {
+                    // 待领取或进行中卡片，内容丰富
+                    card.innerHTML = `
+                        <div class="pr-16">
+                            <div class="flex items-center space-x-2">
+                                <h3 class="font-medium text-lg truncate">${m.name}</h3>
+                                ${tab === 'done' && segment === 'inprogress' && m.soonExpired ? 
+                                `<span class="flex items-center px-2 py-0.5 ml-2 bg-orange-400 text-white text-xs rounded-full font-semibold">
+                                    <svg class='w-3 h-3 mr-1' fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'>
+                                        <path stroke-linecap='round' stroke-linejoin='round' d='M12 8v4l2 2'></path>
+                                        <circle cx='12' cy='12' r='10'></circle>
+                                    </svg>即将失效
+                                </span>` : ''}
+                                ${tab === 'done' && segment === 'inprogress' && m.rejected && !m.soonExpired ? 
+                                `<span class="flex items-center px-2 py-0.5 ml-2 bg-red-500 text-white text-xs rounded-full font-semibold">
+                                    <svg class='w-3 h-3 mr-1' fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'>
+                                        <path stroke-linecap='round' stroke-linejoin='round' d='M6 18L18 6M6 6l12 12'></path>
+                                    </svg>有驳回任务
+                                </span>` : ''}
+                            </div>
+                            <span class="text-gray-500 text-sm mt-1">商户号:</span>
+                            <span class="text-black text-sm ml-1">${m.merchantId}</span>
+                            <p class="text-gray-500 text-sm mt-1">距离商户: <span class="text-black">${m.distance}</span></p>
+                            <span class="text-gray-500 mt-1 text-sm">
+                                待办任务:
+                                <span class="px-2 py-0.5 rounded-full bg-red-100 text-red-600 font-semibold">${m.tasks}</span>
+                            </span>
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                ${m.taskTags.map(tag => {
+                                    let color = 'bg-yellow-100 text-yellow-800';
+                                    if(tag === '切换备用通道') color = 'bg-blue-100 text-blue-800';
+                                    else if(tag === '走访维护商户') color = 'bg-purple-100 text-purple-800';
+                                    else if(tag === '风控处理') color = 'bg-red-100 text-red-600';
+                                    else if(tag === '挂账处理') color = 'bg-orange-100 text-orange-800';
+                                    return `<span class="px-2 py-1 ${color} rounded text-xs">${tag}</span>`;
+                                }).join('')}
+                            </div>
+                        </div>
+                        
+                        <div class="absolute top-1/2 right-4 transform -translate-y-1/2">
+                            ${tab === 'todo' ? 
+                            `<button class="claim-btn px-4 py-1.5 bg-postal-primary text-white rounded-full text-sm hover:bg-postal-hover transition-colors">
+                                领取商户
+                            </button>` : 
+                            (m.soonExpired ?
+                            `<a href="商户任务详情页-即将失效.html" class="flex items-center justify-center w-12 h-12 rounded-full hover:bg-gray-100 transition-colors" title="进入详情页">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </a>`
+                            :
+                            `<a href="商户任务详情页.html" class="flex items-center justify-center w-12 h-12 rounded-full hover:bg-gray-100 transition-colors" title="进入详情页">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </a>`
+                            )
+                            }
+                        </div>
+                    `;
+                }
+                
+                list.appendChild(card);
+            });
+
+            // 无数据展示空状态
+            if (filtered.length === 0) {
+                const emptyState = document.createElement('div');
+                emptyState.className = 'text-center py-8';
+                emptyState.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <p class="text-gray-500 mt-4">暂无${tab === 'todo' ? '待领取商户' : (segment === 'inprogress' ? '进行中商户' : '已完成商户')}</p>
+                `;
+                list.appendChild(emptyState);
+            }
+
+            // 为待领取列表中的按钮添加点击事件
+            if (tab === 'todo') {
+                const claimButtons = document.querySelectorAll('.claim-btn');
+                claimButtons.forEach(button => {
+                    button.addEventListener('click', function(e) {
+                        e.stopPropagation(); // 防止卡片点击事件触发
+                        const card = this.closest('.merchant-item');
+                        const merchantName = card.dataset.merchantName;
+                        // 显示确认弹窗
+                        const modal = document.getElementById('task-confirm-modal');
+                        modal.classList.add('active');
+                        // 存储当前点击的按钮和商户信息，以便确认后使用
+                        window.currentMerchantId = card.dataset.merchantId;
+                        window.currentClaimButton = this;
+                    });
+                });
+            }
+            
+            // 更新分段统计
+            updateSegmentCounts();
+        }
+
+        /**
+         * 更新tab数量
+         * @returns {void}
+         */
+        function updateTabCounts() {
+            document.getElementById('count-todo').textContent = `（${merchants.filter(m => m.status === 'todo').length}）`;
+            document.getElementById('count-done').textContent = `（${merchants.filter(m => m.status === 'done').length}）`;
+        }
+        
+        /**
+         * 更新分段器数量
+         * @returns {void}
+         */
+        function updateSegmentCounts() {
+            const inProgressCount = merchants.filter(m => m.status === 'done' && !m.completed).length;
+            const completedCount = merchants.filter(m => m.status === 'done' && m.completed).length;
+            
+            document.getElementById('count-inprogress').textContent = `(${inProgressCount})`;
+            document.getElementById('count-completed').textContent = `(${completedCount})`;
+        }
+        
+        /**
+         * 更新分段控制器指示器位置
+         * @param {number} index - 选中的分段索引，0表示"进行中"，1表示"已完成"
+         * @returns {void}
+         */
+        function updateSegmentIndicator(index) {
+            const segmentBtns = document.querySelectorAll('.segment-btn');
+            const segmentIndicator = document.getElementById('segment-indicator');
+            const width = 100 / segmentBtns.length;
+            segmentIndicator.style.width = `${width}%`;
+            segmentIndicator.style.left = `${index * width}%`;
+        }
+
+        // tab切换交互
+        document.getElementById('tab-todo').onclick = function() {
+            this.classList.add('text-postal-primary', 'border-postal-primary');
+            this.classList.remove('text-gray-500', 'border-transparent');
+            document.getElementById('count-todo').className = 'text-postal-primary';
+            document.getElementById('tab-done').classList.remove('text-postal-primary', 'border-postal-primary');
+            document.getElementById('tab-done').classList.add('text-gray-500', 'border-transparent');
+            document.getElementById('count-done').className = 'text-gray-500';
+            renderMerchantList('todo');
+        };
+        document.getElementById('tab-done').onclick = function() {
+            this.classList.add('text-postal-primary', 'border-postal-primary');
+            this.classList.remove('text-gray-500', 'border-transparent');
+            document.getElementById('count-done').className = 'text-postal-primary';
+            document.getElementById('tab-todo').classList.remove('text-postal-primary', 'border-postal-primary');
+            document.getElementById('tab-todo').classList.add('text-gray-500', 'border-transparent');
+            document.getElementById('count-todo').className = 'text-gray-500';
+            
+            // 重置分段器状态，默认选中"进行中"
+            document.getElementById('segment-inprogress').classList.add('text-postal-primary');
+            document.getElementById('segment-inprogress').classList.remove('text-gray-500');
+            document.getElementById('segment-completed').classList.remove('text-postal-primary');
+            document.getElementById('segment-completed').classList.add('text-gray-500');
+            
+            // 更新分段指示器位置
+            updateSegmentIndicator(0);
+            
+            renderMerchantList('done', 'inprogress');
+        };
+
+        // 初始化
+        updateTabCounts();
+        
+        // 初始化分段器交互
+        // 初始化分段器指示器位置
+        updateSegmentIndicator(0);
+        
+        document.getElementById('segment-inprogress').addEventListener('click', function() {
+            // 更新指示器位置
+            updateSegmentIndicator(0);
+            
+            // 更新按钮样式
+            this.classList.add('text-postal-primary');
+            this.classList.remove('text-gray-500');
+            
+            const completedBtn = document.getElementById('segment-completed');
+            completedBtn.classList.remove('text-postal-primary');
+            completedBtn.classList.add('text-gray-500');
+            
+            // 重新渲染商户列表
+            renderMerchantList('done', 'inprogress');
+        });
+        
+        document.getElementById('segment-completed').addEventListener('click', function() {
+            // 更新指示器位置
+            updateSegmentIndicator(1);
+            
+            // 更新按钮样式
+            this.classList.add('text-postal-primary');
+            this.classList.remove('text-gray-500');
+            
+            const inProgressBtn = document.getElementById('segment-inprogress');
+            inProgressBtn.classList.remove('text-postal-primary');
+            inProgressBtn.classList.add('text-gray-500');
+            
+            // 重新渲染商户列表
+            renderMerchantList('done', 'completed');
+        });
+        
+        renderMerchantList('todo');
+
+        // 初始化弹窗交互
+        document.getElementById('cancel-task-btn').addEventListener('click', function() {
+            document.getElementById('task-confirm-modal').classList.remove('active');
+        });
+
+        document.getElementById('confirm-task-btn').addEventListener('click', function() {
+            // 关闭弹窗
+            document.getElementById('task-confirm-modal').classList.remove('active');
+            
+            const merchantId = window.currentMerchantId;
+            const button = window.currentClaimButton;
+            
+            // 模拟领取操作 - 更改商户状态
+            const merchantIndex = merchants.findIndex(m => m.id === merchantId);
+            if (merchantIndex !== -1) {
+                merchants[merchantIndex].status = 'done';
+                
+                // 更新统计数量
+                updateTabCounts();
+                
+                // 重新渲染当前列表
+                renderMerchantList('todo');
+                
+                // 显示成功提示
+                // alert(`商户 ${merchants[merchantIndex].name} 已成功领取! 该商户下所有任务将由您负责。`);
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+
+
