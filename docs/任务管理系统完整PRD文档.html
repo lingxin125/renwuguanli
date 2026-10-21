@@ -1,0 +1,1797 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>微邮付任务管理系统 - 完整PRD文档</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/mermaid@9.4.3/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #00963f;
+            --primary-dark: #007a33;
+            --primary-light: #e8f5e9;
+            --bg-color: #f9fafb;
+            --text-color: #1f2937;
+            --card-bg: white;
+            --border-color: #e5e7eb;
+        }
+        
+        .prd-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .section-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .section-title {
+            color: var(--primary-color);
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid var(--primary-light);
+            padding-bottom: 0.5rem;
+        }
+        
+        .feature-block {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-left: 3px solid var(--primary-color);
+        }
+        
+        .mermaid {
+            text-align: center;
+            margin: 1.5rem 0;
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+        }
+        
+        .toc {
+            position: sticky;
+            top: 2rem;
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .toc a {
+            display: block;
+            padding: 0.5rem 0;
+            color: var(--text-color);
+            text-decoration: none;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .toc a:hover {
+            color: var(--primary-color);
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .priority-high { background: #fee2e2; color: #dc2626; }
+        .priority-medium { background: #fef3c7; color: #d97706; }
+        .priority-low { background: #d1fae5; color: #059669; }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+        
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 0.75rem;
+            text-align: left;
+        }
+        
+        th {
+            background: var(--primary-light);
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="prd-container">
+        <header class="mb-8">
+            <h1 class="text-4xl font-bold text-center mb-4" style="color: var(--primary-color);">
+                微邮付任务管理系统
+            </h1>
+            <h2 class="text-2xl text-center text-gray-600 mb-4">完整产品需求文档 (PRD)</h2>
+            <div class="text-center text-gray-500">
+                <p>版本: v6.0 | 创建日期: 2025-04-21 | 最后更新: 2025-06-04</p>
+                <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+                    <p class="text-blue-800"><strong>v6.0 更新说明：</strong>简化地图功能，正式商户仅做位置展示，目标商户通过地图找商户功能导入POI数据，取消围栏拓客和区域点选指派功能。任务驾驶舱功能标记为本期不做。</p>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- 目录 -->
+            <div class="lg:col-span-1">
+                <div class="toc">
+                    <h3 class="font-semibold mb-4 text-lg">文档目录</h3>
+                    <nav>
+                        <a href="#overview">1. 项目概述</a>
+                        <a href="#architecture">2. 系统架构</a>
+                        <a href="#modules">3. 功能模块详解</a>
+                        <a href="#flows">4. 业务流程图</a>
+                        <a href="#interfaces">5. 接口设计</a>
+                        <a href="#ui-spec">6. 界面设计规范</a>
+                        <a href="#dev-requirements">7. 开发要求</a>
+                        <a href="#test-cases">8. 测试用例</a>
+                        <a href="#deployment">9. 部署方案</a>
+                        <a href="#appendix">10. 附录</a>
+                    </nav>
+                </div>
+            </div>
+
+            <!-- 主要内容 -->
+            <div class="lg:col-span-3">
+                <!-- 项目概述 -->
+                <section id="overview" class="section-card">
+                    <h2 class="section-title">1. 项目概述</h2>
+                    
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">1.1 项目背景</h3>
+                        <p class="mb-4">
+                            微邮付任务管理系统是一个综合性的商户任务管理平台，支持<strong>目标商户管理→正式商户管理→任务下发与执行</strong>的完整业务流程。
+                            系统包含PC端管理平台和移动端执行应用，实现商户全生命周期的数字化管理。
+                        </p>
+                        <h4 class="font-medium mb-2">项目子背景:</h4>
+                        <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+                        
+                            当前的客户经理任务管理功能以“任务类型”（如切换通道、合并补充资料、存量商户走访、目标商户走访等）为主要维度进行组织和展示。客户经理需要处理上级下发的各类任务。
+                            <br> <br>现有模式痛点:
+                            - 效率低下: 当任务类型增多，或同一商户存在多个不同类型的任务时，客户经理需要在不同任务列表间频繁切换，查找不便，处理效率低。
+                            - 不符合实际作业习惯: 客户经理线下走访商户时，更倾向于一次性处理完该商户的所有待办事项，现有模式无法很好地支持这种以商户为中心的作业方式。
+                            - 扩展性受限: 未来新增任务类型，需要不断增加新的列表入口，导致功能臃肿，维护成本高。
+                            - 外部协同: 需要更好地支持与外部系统（如邮付易推小程序）的数据联动和任务处理协同。
+                        </div>
+                        <div class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm">
+                        
+                            在实际业务运营过程中，商户经常会遇到风控和挂账问题：
+                            <br>- 风控主要包括微信、支付宝等支付渠道的风控，以及第三方支付通道的风控；
+                            <br>- 挂账则主要发生在第三方支付通道。
+                            <br>当前，平台在收到风控或挂账通知后，通常采用纯手工处理方式：平台首先通知各省运营，再进行分发至商户的客户经理，由客户经理协助商户准备相关资料，再由平台与上游通道方沟通处理。这一流程不仅耗时耗力，且缺乏标准化和系统化的管理，容易导致响应不及时、处理效率低下，影响商户的正常业务和满意度。随着风控和挂账场景的增多，现有的人工处理方式已难以满足业务发展的需求，急需建立一套高效、规范的风控挂账任务处理机制。
+                        </div>
+                        <div class="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm">
+                            当前的目标商户走访功能，主要依赖机构在PC后台导入商户信息或客户经理自行拓展并手动录入。商户信息下发后，客户经理在移动端进行走访、打卡，并逐步将其转化为平台的正式商户。此模式下，商户的发现和覆盖范围有一定局限性。
+                            <br>为提升商户拓展效率和覆盖面，计划引入腾讯地图服务及其点位商户信息，并结合机构的区域化管理策略。这将使客户经理能通过地图直观发现潜在商户，机构也能通过地图进行更精细化的区域性战略部署和任务指派，同时逐步沉淀平台自有的商户数据资产。
+                         </div>
+                        
+                        <h4 class="font-medium mb-2 mt-4">核心业务场景:</h4>
+                        <ul class="list-disc pl-6 space-y-1">
+                            <li>存量商户的任务下发与处理（补充资料、切换通道、走访维护、风控、挂账等）</li>
+                            <li>目标商户的拓展与转化（目标商户→意向商户→正式商户）</li>
+                            <li>基于腾讯地图的商户位置展示与POI信息管理</li>
+                            <li>机构层级化的任务下发与监控</li>
+                        </ul>
+                    </div>
+
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">1.2 项目目标</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <ul class="list-disc pl-4 space-y-1 text-sm">
+                                    <li>提升客户经理工作效率</li>
+                                    <li>扩大商户覆盖范围</li>
+                                    <li>构建平台数据资产</li>
+                                    <li>建立与规范风控挂账任务处理机制</li>
+                                    <li>提升商户服务体验</li>
+                                   
+                                    <li>提高任务完成率</li>
+                                    <li>实现商户转化率</li>
+                                </ul>
+                            </div>
+                           
+                        </div>
+                    </div>
+
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">1.3 用户角色</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>角色</th>
+                                    <th>主要职责</th>
+                                    <th>使用平台</th>
+                                    <th>权限级别</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>客户经理</td>
+                                    <td>商户拓展、任务处理、实地走访</td>
+                                    <td>移动端</td>
+                                    <td>执行层</td>
+                                </tr>
+                                <tr>
+                                    <td>营业所</td>
+                                    <td>任务下发、进度监控</td>
+                                    <td>PC端</td>
+                                    <td>管理层</td>
+                                </tr>
+                                <tr>
+                                    <td>区县机构</td>
+                                    <td>任务下发、进度监控</td>
+                                    <td>PC端</td>
+                                    <td>管理层</td>
+                                </tr>
+                                <tr>
+                                    <td>市级机构</td>
+                                    <td>任务下发、数据监控</td>
+                                    <td>PC端</td>
+                                    <td>管理层</td>
+                                </tr>
+                                <tr>
+                                    <td>省级机构</td>
+                                    <td>全局监控、数据分析</td>
+                                    <td>PC端</td>
+                                    <td>决策层</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">1.4 核心业务概念</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <h4 class="font-medium mb-2">商户类型层级</h4>
+                                <div class="bg-white p-3 rounded border">
+                                    <div class="flex items-center space-x-2 mb-2">
+                                        <div class="w-3 h-3 bg-blue-500 rounded-full"></div>
+                                        <span class="text-sm font-medium">目标商户</span>
+                                    </div>
+                                    <div class="text-center my-1">↓ 走访转化</div>
+                                    <div class="flex items-center space-x-2 mb-2">
+                                        <div class="w-3 h-3 bg-orange-500 rounded-full"></div>
+                                        <span class="text-sm font-medium">意向商户</span>
+                                    </div>
+                                    <div class="text-center my-1">↓ 进件入驻</div>
+                                    <div class="flex items-center space-x-2">
+                                        <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                                        <span class="text-sm font-medium">正式商户</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 class="font-medium mb-2">目标商户来源</h4>
+                                <ul class="space-y-2 text-sm">
+                                    <li><span class="status-badge priority-high">系统导入</span> PC端数据导入（自有数据或地图找商户导出）</li>
+                                    <li><span class="status-badge priority-low">客户经理添加</span> 移动端搜索POI或手动添加</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 系统架构 -->
+                <section id="architecture" class="section-card">
+                    <h2 class="section-title">2. 系统架构</h2>
+                    
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">2.1 整体架构图</h3>
+                        <div class="mermaid">
+graph TB
+    subgraph "前端层"
+        A[PC端管理平台<br/>Vue.js + Element UI]
+        B[移动端应用<br/>微信小程序/H5]
+    end
+    
+    subgraph "网关层"
+        C[API网关<br/>路由/鉴权/限流]
+    end
+    
+    subgraph "服务层"
+        D[用户服务<br/>User Service]
+        E[任务服务<br/>Task Service]
+        F[商户服务<br/>Merchant Service]
+        G[地图服务<br/>Map Service]
+        H[消息服务<br/>Message Service]
+    end
+    
+    subgraph "数据层"
+        I[(MySQL<br/>主数据库)]
+        J[(Redis<br/>缓存)]
+        K[(MongoDB<br/>日志存储)]
+    end
+    
+    subgraph "外部服务"
+        L[腾讯地图API]
+        M[微信API]
+        N[短信服务]
+    end
+    
+    A --> C
+    B --> C
+    C --> D
+    C --> E
+    C --> F
+    C --> G
+    C --> H
+    
+    D --> I
+    E --> I
+    F --> I
+    G --> I
+    H --> I
+    
+    D --> J
+    E --> J
+    F --> J
+    G --> J
+    
+    H --> K
+    G --> L
+    H --> M
+    H --> N
+                        </div>
+                    </div>
+
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">2.2 技术架构</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>层级</th>
+                                    <th>技术栈</th>
+                                    <th>说明</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>前端</td>
+                                    <td>Vue.js 3.x, Element Plus, 微信小程序</td>
+                                    <td>PC端管理后台 + 移动端小程序</td>
+                                </tr>
+                                <tr>
+                                    <td>后端</td>
+                                    <td>Spring Boot 2.7, Spring Cloud</td>
+                                    <td>微服务架构，服务治理</td>
+                                </tr>
+                                <tr>
+                                    <td>数据库</td>
+                                    <td>MySQL 8.0, Redis 6.x, MongoDB 4.x</td>
+                                    <td>主数据库 + 缓存 + 日志存储</td>
+                                </tr>
+                                <tr>
+                                    <td>中间件</td>
+                                    <td>RabbitMQ, Elasticsearch</td>
+                                    <td>消息队列 + 搜索引擎</td>
+                                </tr>
+                                <tr>
+                                    <td>部署</td>
+                                    <td>Docker, Kubernetes, Jenkins</td>
+                                    <td>容器化部署 + CI/CD</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 功能模块详解 -->
+                <section id="modules" class="section-card">
+                    <h2 class="section-title">3. 功能模块详解</h2>
+                    
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">3.1 PC端功能模块</h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <div class="bg-white p-4 rounded-lg border">
+                                <h4 class="font-medium text-blue-600 mb-3">正式商户管理</h4>
+                                <ul class="text-sm space-y-1">
+                                    <li>• 商户列表管理（筛选、排序、搜索）</li>
+                                    <li>• 任务统计概览（总数、完成率、状态分布）</li>
+                                    <li>• 批量任务导入（Excel模板）</li>
+                                    <li>• 任务详情查看（任务维度/商户维度）</li>
+                                    <li>• 任务类型：补充资料、切换通道、走访维护、风控、挂账</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="bg-white p-4 rounded-lg border">
+                                <h4 class="font-medium text-green-600 mb-3">目标商户管理（基本原逻辑）</h4>
+                                <ul class="text-sm space-y-1">
+                                    <li>• 目标商户统计（目标/意向/正式商户数量）</li>
+                                    <li>• 来源管理（系统录入/手动上传）</li>
+                                    <li>• 地区分布统计（市/县/营业所维度）</li>
+                                    
+                                    <li>• 商户进度跟踪</li>
+                                    <li>• 批量目标商户导入</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="bg-white p-4 rounded-lg border">
+                                <h4 class="font-medium text-purple-600 mb-3">地图功能</h4>
+                                <ul class="text-sm space-y-1">
+                                    <!-- <li>• <strong>正式商户地图展示：</strong>将微邮付正式商户坐标展示在地图上</li> -->
+                                    <li>• <strong>地图找商户：</strong>绘制区域获取腾讯POI潜客信息</li>
+                                    <li>• <strong>POI数据导出：</strong>将潜客信息导出为Excel</li>
+                                    <li>• <strong>目标商户导入：</strong>将POI潜客手动导入为目标商户</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="bg-white p-4 rounded-lg border">
+                                <h4 class="font-medium text-orange-600 mb-3">任务驾驶舱 <span class="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded">本期不做</span></h4>
+                                <ul class="text-sm space-y-1">
+                                    <li>• 实时数据监控（商户总数、任务总数）</li>
+                                    <li>• 可视化图表（饼图、趋势图、热力图）</li>
+                                    <li>• 动态交互（时间筛选、数字滚动）</li>
+                                    <li>• 异常预警（任务超时、完成率低）</li>
+                                    <li>• 决策支持（多维度数据分析）</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">3.2 移动端功能模块</h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-white p-4 rounded-lg border">
+                                <h4 class="font-medium text-blue-600 mb-3">任务管理</h4>
+                                <ul class="text-sm space-y-2">
+                                    <li><strong>任务类型选择页：</strong>存量商户/目标商户选择入口</li>
+                                    <li><strong>商户任务列表：</strong>待领取/已领取，进行中/已完成分段</li>
+                                    <li><strong>地图模式：</strong>商户位置可视化，地图与列表联动</li>
+                                    <li><strong>任务详情：</strong>任务状态分段，操作按钮，通知提醒</li>
+                                    <li><strong>商户领取：</strong>正式商户任务3天有效期，到期前提醒</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="bg-white p-4 rounded-lg border">
+                                <h4 class="font-medium text-green-600 mb-3">目标商户拓展</h4>
+                                <ul class="text-sm space-y-2">
+                                    <li><strong>目标商户列表：</strong>不同来源商户展示和管理</li>
+                                    <li><strong>地图商户：</strong>目标商户地图展示，快速导航</li>
+                                    <li><strong>新增目标商户：</strong>表单填写，地址定位，照片上传</li>
+                                    <li><strong>商户转化：</strong>目标→意向→正式的状态流转</li>
+                                    <li><strong>打卡走访：</strong>工作量统计，转化记录</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="bg-white p-4 rounded-lg border">
+                                <h4 class="font-medium text-purple-600 mb-3">正式商户任务处理</h4>
+                                <ul class="text-sm space-y-2">
+                                    <li><strong>补充资料任务：</strong>商户信息完善，资料上传</li>
+                                    <li><strong>切换通道任务：</strong>通道变更确认，测试验证</li>
+                                    <li><strong>走访维护任务：</strong>实地走访，服务记录</li>
+                                    <li><strong>风控任务：</strong>风险调查，材料收集，分享链接</li>
+                                    <li><strong>挂账任务：</strong>解决方案选择，账户信息处理</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="bg-white p-4 rounded-lg border">
+                                <h4 class="font-medium text-orange-600 mb-3">商户详情</h4>
+                                <ul class="text-sm space-y-2">
+                                    <li><strong>目标商户详情：</strong>基础信息，打卡状态，业绩录入</li>
+                                    <li><strong>意向商户详情：</strong>进度跟踪，转化操作，备注管理</li>
+                                    <li><strong>正式商户关联：</strong>商户号输入，状态关联</li>
+                                    <li><strong>正式商户详情：</strong>查看正式商户详情</li>
+                                    <li><strong>正式商户任务详情：</strong>正式商户具体任务详情</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">3.3 核心业务规则</h3>
+                        
+                        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+                            <h4 class="font-medium text-yellow-800 mb-2">⚠️ 重要业务规则</h4>
+                            <ul class="text-sm text-yellow-700 space-y-1">
+                                <li>• 商户领取后有3天处理时限，到期前1天自动提醒</li>
+                                <li>• 客户经理领取商户后，该商户下所有任务都由其负责</li>
+                                <li>• 目标商户转化流程：目标商户→意向商户→正式商户</li>
+                                <li>• 地图功能：目标商户与正式商户位置展示，手动录入展示位置</li>
+                                <li>• 目标商户来源：PC端系统导入、客户经理手动添加</li>
+                            </ul>
+                        </div>
+                        
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>业务场景</th>
+                                    <th>规则说明</th>
+                                    <th>异常处理</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>商户领取</td>
+                                    <td>3天有效期，期间需处理至少1个任务</td>
+                                    <td>到期自动释放，需重新领取</td>
+                                </tr>
+                                <tr>
+                                    <td>任务状态流转</td>
+                                    <td>待处理→审核中→已完成（或驳回→重新提交）</td>
+                                    <td>驳回时推送通知，支持重新提交</td>
+                                </tr>
+                                <tr>
+                                    <td>商户转化</td>
+                                    <td>状态变更后同网点客户经理可见</td>
+                                    <td>转化失败时提示具体原因</td>
+                                </tr>
+                                <tr>
+                                    <td>权限控制</td>
+                                    <td>按机构层级和地理范围限制操作</td>
+                                    <td>权限不足时友好提示</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 业务流程图 -->
+                <section id="flows" class="section-card">
+                    <h2 class="section-title">4. 业务流程图</h2>
+                    
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">4.1 存量商户任务处理流程</h3>
+                        <div class="mermaid">
+graph TD
+    A[机构管理员登录PC端] --> B[批量导入存量商户任务]
+    B --> C[Excel模板填写商户信息]
+    C --> D[上传任务文件]
+    D --> E[系统处理分配]
+    E --> F[任务下发成功]
+    
+    F --> G[客户经理登录移动端]
+    G --> H[选择存量商户任务]
+    H --> I[查看待领取商户]
+    I --> J[领取商户确认]
+    J --> K[商户任务详情页]
+    K --> L[处理具体任务]
+    L --> M{任务类型}
+    
+    M -->|补充资料| N[完善商户信息]
+    M -->|切换通道| O[通道变更操作]
+    M -->|走访维护| P[实地走访记录]
+    M -->|风控处理| Q[材料收集上传]
+    M -->|挂账处理| R[解决方案选择]
+    
+    N --> S[提交审核/免审]
+    O --> S
+    P --> S
+    Q --> S
+    R --> S
+    
+    S --> T{审核结果/免审}
+    T -->|通过| U[任务完成]
+    T -->|驳回| V[PC端编辑/移动端重新处理]
+    V --> W[重新提交]
+    W --> T
+    
+    %% PC端并行编辑流程
+    F --> X[PC端任务管理]
+    X --> Z[编辑任务信息]
+    Z --> S
+                        </div>
+                    </div>
+
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">4.2 目标商户转化流程</h3>
+                        <div class="mermaid">
+graph TD
+    A[客户经理发现商户] --> B{商户来源}
+    B -->|PC端系统导入| C[目标商户池领取]
+    B -->|移动端添加| D[客户经理创建]
+    
+    C --> E[执行打卡]
+    D --> E
+    
+    E --> F[商户走访]
+    F --> G{走访结果}
+    G -->|有意向| H[转为意向商户]
+    G -->|暂无意向| I[继续跟进]
+    G -->|已是正式商户| J[关联商户号]
+    
+    H --> K[深度沟通]
+    K --> L[进件资料准备]
+    L --> M[提交入驻申请]
+    M --> N[审核通过]
+    N --> O[转为正式商户]
+    
+    I --> F
+    J --> O
+                        </div>
+                    </div>
+
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">4.3 目标商户任务下发流程</h3>
+                        <div class="mermaid">
+graph TD
+    A[机构登录PC端] --> B{操作方式}
+    B -->|批量导入| C[下载Excel模板]
+    B -->|地图找商户| D[打开地图功能]
+    
+    C --> E[填写目标商户信息]
+    E --> F[上传文件]
+    F --> G[系统处理匹配]
+    G --> H[导入目标商户池]
+    
+    D --> I[绘制区域范围]
+    I --> J[获取腾讯POI数据]
+    J --> K[导出潜客Excel]
+    K --> L[手动筛选潜客]
+    L --> M[导入目标商户池]
+    
+    H --> N[目标商户下发成功]
+    M --> N
+    N --> O[客户经理移动端接收]
+    O --> P[目标商户走访打卡]
+                        </div>
+                    </div>
+
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">4.4 PC端任务编辑审核流程</h3>
+                        <div class="mermaid">
+graph TD
+    A[存量商户任务下发] --> B[PC端任务管理页面]
+    B --> C[查看任务列表]
+    C --> D[选择具体任务]
+    D --> E[查看任务详情]
+    
+    E --> F{操作选择}
+    F -->|直接编辑| G[编辑任务信息]
+    F -->|等待移动端处理| H[移动端客户经理处理]
+    
+    G --> J[提交审核/免审]
+    
+    H --> K[客户经理提交结果]
+    K --> L{是否需要审核}
+    L -->|需要审核| M[PC端审核页面]
+    L -->|免审| N[任务完成]
+    
+    M --> O{审核结果}
+    O -->|通过| N
+    O -->|驳回| P[PC端编辑驳回原因]
+    P --> Q[推送驳回通知]
+    Q --> R{重新处理方式}
+    R -->|移动端重新处理| H
+    R -->|PC端直接编辑| G
+    
+    J --> L
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 接口设计 -->
+                <section id="interfaces" class="section-card">
+                    <h2 class="section-title">5. 接口设计</h2>
+                    
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">5.1 核心接口清单</h3>
+                        
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                            <h4 class="font-medium text-blue-800 mb-2">🔗 接口规范说明</h4>
+                            <ul class="text-sm text-blue-700 space-y-1">
+                                <li>• 所有接口统一使用 RESTful 风格</li>
+                                <li>• 请求/响应格式：JSON</li>
+                                <li>• 认证方式：JWT Token</li>
+                                <li>• 错误码统一规范：业务码 + HTTP状态码</li>
+                            </ul>
+                        </div>
+                        
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>接口模块</th>
+                                    <th>接口名称</th>
+                                    <th>请求方式</th>
+                                    <th>接口路径</th>
+                                    <th>说明</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td rowspan="4">用户认证</td>
+                                    <td>用户登录</td>
+                                    <td>POST</td>
+                                    <td>/api/auth/login</td>
+                                    <td>用户名密码登录，返回Token</td>
+                                </tr>
+                                <tr>
+                                    <td>获取用户信息</td>
+                                    <td>GET</td>
+                                    <td>/api/auth/userinfo</td>
+                                    <td>根据Token获取用户基本信息</td>
+                                </tr>
+                                <tr>
+                                    <td>权限验证</td>
+                                    <td>GET</td>
+                                    <td>/api/auth/permissions</td>
+                                    <td>获取用户权限列表</td>
+                                </tr>
+                                <tr>
+                                    <td>退出登录</td>
+                                    <td>POST</td>
+                                    <td>/api/auth/logout</td>
+                                    <td>Token失效处理</td>
+                                </tr>
+                                <tr>
+                                    <td rowspan="5">商户管理</td>
+                                    <td>商户列表查询</td>
+                                    <td>GET</td>
+                                    <td>/api/merchants</td>
+                                    <td>支持分页、筛选、排序</td>
+                                </tr>
+                                <tr>
+                                    <td>商户详情</td>
+                                    <td>GET</td>
+                                    <td>/api/merchants/{id}</td>
+                                    <td>获取商户详细信息</td>
+                                </tr>
+                                <tr>
+                                    <td>新增商户</td>
+                                    <td>POST</td>
+                                    <td>/api/merchants</td>
+                                    <td>手动录入或地图添加商户</td>
+                                </tr>
+                                <tr>
+                                    <td>更新商户</td>
+                                    <td>PUT</td>
+                                    <td>/api/merchants/{id}</td>
+                                    <td>更新商户信息</td>
+                                </tr>
+                                <tr>
+                                    <td>商户状态转化</td>
+                                    <td>POST</td>
+                                    <td>/api/merchants/{id}/transform</td>
+                                    <td>目标→意向→正式商户转化</td>
+                                </tr>
+                                <tr>
+                                    <td rowspan="6">任务管理</td>
+                                    <td>任务列表查询</td>
+                                    <td>GET</td>
+                                    <td>/api/tasks</td>
+                                    <td>支持状态筛选、分页查询</td>
+                                </tr>
+                                <tr>
+                                    <td>任务详情</td>
+                                    <td>GET</td>
+                                    <td>/api/tasks/{id}</td>
+                                    <td>获取任务详细信息</td>
+                                </tr>
+                                <tr>
+                                    <td>领取商户任务</td>
+                                    <td>POST</td>
+                                    <td>/api/tasks/claim</td>
+                                    <td>领取商户下所有任务</td>
+                                </tr>
+                                <tr>
+                                    <td>提交任务</td>
+                                    <td>POST</td>
+                                    <td>/api/tasks/{id}/submit</td>
+                                    <td>提交任务处理结果</td>
+                                </tr>
+                                <tr>
+                                    <td>任务审核</td>
+                                    <td>POST</td>
+                                    <td>/api/tasks/{id}/review</td>
+                                    <td>审核任务，通过或驳回</td>
+                                </tr>
+                                <tr>
+                                    <td>批量导入任务</td>
+                                    <td>POST</td>
+                                    <td>/api/tasks/import</td>
+                                    <td>Excel文件批量导入</td>
+                                </tr>
+                                <tr>
+                                    <td rowspan="4">地图服务</td>
+                                    <td>获取地图POI</td>
+                                    <td>GET</td>
+                                    <td>/api/map/pois</td>
+                                    <td>获取指定区域腾讯POI点位</td>
+                                </tr>
+                                <tr>
+                                    <td>正式商户地图展示</td>
+                                    <td>GET</td>
+                                    <td>/api/map/merchants</td>
+                                    <td>获取正式商户坐标信息</td>
+                                </tr>
+                                <tr>
+                                    <td>POI数据导出</td>
+                                    <td>POST</td>
+                                    <td>/api/map/export-pois</td>
+                                    <td>导出区域POI为Excel文件</td>
+                                </tr>
+                                <tr>
+                                    <td>地址解析</td>
+                                    <td>GET</td>
+                                    <td>/api/map/geocode</td>
+                                    <td>地址转经纬度坐标</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">5.2 核心接口详细设计</h3>
+                        
+                        <div class="bg-white border rounded-lg p-4 mb-4">
+                            <h4 class="font-medium mb-3">商户列表查询接口</h4>
+                            <div class="bg-gray-50 p-3 rounded text-sm mb-3">
+                                <strong>GET</strong> /api/merchants
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <h5 class="font-medium mb-2">请求参数：</h5>
+                                    <pre class="bg-gray-100 p-3 rounded text-xs overflow-x-auto">
+{
+  "page": 1,
+  "size": 20,
+  "type": "target|intention|formal",
+  "source": "system|map|manual",
+  "status": "active|inactive",
+  "keyword": "商户名称关键字",
+  "region": "区域编码",
+  "industry": "行业类型",
+  "sortBy": "distance|createTime|taskCount",
+  "sortOrder": "asc|desc"
+}</pre>
+                                </div>
+                                <div>
+                                    <h5 class="font-medium mb-2">响应结果：</h5>
+                                    <pre class="bg-gray-100 p-3 rounded text-xs overflow-x-auto">
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "total": 150,
+    "list": [
+      {
+        "id": "123456",
+        "name": "美佳超市",
+        "type": "target",
+        "source": "system",
+        "address": "深圳市福田区...",
+        "distance": "0.5km",
+        "taskCount": 3,
+        "createTime": "2025-01-20"
+      }
+    ]
+  }
+}</pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white border rounded-lg p-4">
+                            <h4 class="font-medium mb-3">任务提交接口</h4>
+                            <div class="bg-gray-50 p-3 rounded text-sm mb-3">
+                                <strong>POST</strong> /api/tasks/{taskId}/submit
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <h5 class="font-medium mb-2">请求参数：</h5>
+                                    <pre class="bg-gray-100 p-3 rounded text-xs overflow-x-auto">
+{
+  "taskType": "supplement|channel|visit|risk|suspend",
+  "result": {
+    "description": "处理说明",
+    "attachments": ["file1.jpg", "file2.pdf"],
+    "location": {
+      "latitude": 22.547,
+      "longitude": 114.085
+    }
+  },
+  "submitTime": "2025-01-21 14:30:00"
+}</pre>
+                                </div>
+                                <div>
+                                    <h5 class="font-medium mb-2">响应结果：</h5>
+                                    <pre class="bg-gray-100 p-3 rounded text-xs overflow-x-auto">
+{
+  "code": 200,
+  "message": "任务提交成功",
+  "data": {
+    "taskId": "T123456",
+    "status": "reviewing",
+    "submitTime": "2025-01-21 14:30:00",
+    "reviewTime": null
+  }
+}</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 界面设计规范 -->
+                <section id="ui-spec" class="section-card">
+                    <h2 class="section-title">6. 界面设计规范</h2>
+                    
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">6.1 设计系统</h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div class="bg-white border rounded-lg p-4">
+                                <h4 class="font-medium mb-3">色彩规范</h4>
+                                <div class="space-y-2">
+                                    <div class="flex items-center space-x-2">
+                                        <div class="w-4 h-4 bg-green-600 rounded"></div>
+                                        <span class="text-sm">主色调：#00963f（邮政绿）</span>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <div class="w-4 h-4 bg-green-100 rounded"></div>
+                                        <span class="text-sm">浅绿色：#e8f5e9（背景）</span>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <div class="w-4 h-4 bg-orange-500 rounded"></div>
+                                        <span class="text-sm">橙色：#ff9800（警告）</span>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <div class="w-4 h-4 bg-red-500 rounded"></div>
+                                        <span class="text-sm">红色：#f44336（错误）</span>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <div class="w-4 h-4 bg-blue-500 rounded"></div>
+                                        <span class="text-sm">蓝色：#2196f3（信息）</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-white border rounded-lg p-4">
+                                <h4 class="font-medium mb-3">字体规范</h4>
+                                <div class="space-y-2 text-sm">
+                                    <div><span class="font-bold">大标题：</span>20px/24px Bold</div>
+                                    <div><span class="font-semibold">中标题：</span>16px/20px SemiBold</div>
+                                    <div><span class="font-medium">小标题：</span>14px/18px Medium</div>
+                                    <div><span class="font-normal">正文：</span>14px/18px Regular</div>
+                                    <div><span class="text-gray-500">辅助文字：</span>12px/16px Regular</div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-white border rounded-lg p-4">
+                                <h4 class="font-medium mb-3">间距规范</h4>
+                                <div class="space-y-2 text-sm">
+                                    <div>页面边距：16px</div>
+                                    <div>卡片内边距：16px</div>
+                                    <div>元素间距：8px/12px/16px</div>
+                                    <div>分组间距：24px</div>
+                                    <div>页面间距：32px</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">6.2 组件库规范</h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <h4 class="font-medium mb-3">按钮组件</h4>
+                                <div class="space-y-3">
+                                    <button class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">主要按钮</button>
+                                    <button class="px-4 py-2 border border-green-600 text-green-600 rounded-lg hover:bg-green-50 ml-2">次要按钮</button>
+                                    <div class="text-xs text-gray-500 mt-1">
+                                        主要按钮：关键操作，每页不超过1个<br>
+                                        次要按钮：普通操作，可多个使用
+                                    </div>
+                                </div>
+                                
+                                <h4 class="font-medium mb-3 mt-6">状态标签</h4>
+                                <div class="space-y-2">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">正式商户</span>
+                                        <span class="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">意向商户</span>
+                                        <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">目标商户</span>
+                                    </div>
+                                    <div class="text-xs text-gray-500">
+                                        不同状态使用不同颜色区分
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h4 class="font-medium mb-3">卡片组件</h4>
+                                <div class="bg-white border rounded-lg p-4 shadow-sm">
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <h5 class="font-medium">美佳超市</h5>
+                                            <p class="text-sm text-gray-500 mt-1">深圳市福田区华强北路</p>
+                                            <div class="flex items-center space-x-2 mt-2">
+                                                <span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">目标商户</span>
+                                                <span class="text-xs text-gray-400">距离 0.5km</span>
+                                            </div>
+                                        </div>
+                                        <button class="text-gray-400">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="text-xs text-gray-500 mt-2">
+                                    商户卡片标准布局：标题+地址+标签+操作
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">6.3 交互规范</h3>
+                        
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>交互场景</th>
+                                    <th>交互方式</th>
+                                    <th>反馈形式</th>
+                                    <th>注意事项</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>按钮点击</td>
+                                    <td>点击变色+动画</td>
+                                    <td>即时视觉反馈</td>
+                                    <td>避免连续点击</td>
+                                </tr>
+                                <tr>
+                                    <td>列表刷新</td>
+                                    <td>下拉刷新</td>
+                                    <td>加载动画+提示</td>
+                                    <td>刷新期间禁用操作</td>
+                                </tr>
+                                <tr>
+                                    <td>表单提交</td>
+                                    <td>字段验证</td>
+                                    <td>错误标红+提示文字</td>
+                                    <td>必填项明确标识</td>
+                                </tr>
+                                <tr>
+                                    <td>弹窗确认</td>
+                                    <td>二次确认</td>
+                                    <td>模态弹窗</td>
+                                    <td>关键操作必须确认</td>
+                                </tr>
+                                <tr>
+                                    <td>地图操作</td>
+                                    <td>点击标记</td>
+                                    <td>信息卡片展示</td>
+                                    <td>支持联动高亮</td>
+                                </tr>
+                                <tr>
+                                    <td>搜索筛选</td>
+                                    <td>实时搜索</td>
+                                    <td>结果即时更新</td>
+                                    <td>无结果时友好提示</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 开发要求 -->
+                <section id="dev-requirements" class="section-card">
+                    <h2 class="section-title">7. 开发要求</h2>
+                    
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">7.1 技术要求</h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <h4 class="font-medium text-blue-600 mb-3">前端要求</h4>
+                                <ul class="space-y-2 text-sm">
+                                    <li><strong>PC端：</strong>Vue.js 3.x + Element Plus + TypeScript</li>
+                                    <li><strong>移动端：</strong>微信小程序原生开发</li>
+                                    <li><strong>状态管理：</strong>Pinia（Vue3推荐）</li>
+                                    <li><strong>HTTP客户端：</strong>Axios + 请求/响应拦截器</li>
+                                    <li><strong>地图组件：</strong>腾讯地图 JavaScript SDK</li>
+                                    <li><strong>图表组件：</strong>Chart.js 或 ECharts</li>
+                                    <li><strong>构建工具：</strong>Vite + ESLint + Prettier</li>
+                                </ul>
+                            </div>
+                            
+                            <div>
+                                <h4 class="font-medium text-green-600 mb-3">后端要求</h4>
+                                <ul class="space-y-2 text-sm">
+                                    <li><strong>框架：</strong>Spring Boot 2.7+ + Spring Cloud</li>
+                                    <li><strong>数据库：</strong>MySQL 8.0 + MyBatis Plus</li>
+                                    <li><strong>缓存：</strong>Redis 6.x</li>
+                                    <li><strong>消息队列：</strong>RabbitMQ</li>
+                                    <li><strong>文档工具：</strong>Swagger UI</li>
+                                    <li><strong>日志管理：</strong>Logback + ELK Stack</li>
+                                    <li><strong>监控：</strong>Spring Boot Actuator + Micrometer</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">7.2 性能要求</h3>
+                        
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>性能指标</th>
+                                    <th>目标值</th>
+                                    <th>测试方法</th>
+                                    <th>备注</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>页面加载时间</td>
+                                    <td>< 2秒</td>
+                                    <td>Chrome DevTools</td>
+                                    <td>首屏可见时间</td>
+                                </tr>
+                                <tr>
+                                    <td>接口响应时间</td>
+                                    <td>< 500ms</td>
+                                    <td>JMeter压测</td>
+                                    <td>P95响应时间</td>
+                                </tr>
+                                <tr>
+                                    <td>并发用户数</td>
+                                    <td>1000+</td>
+                                    <td>负载测试</td>
+                                    <td>系统稳定运行</td>
+                                </tr>
+                                <tr>
+                                    <td>数据库查询</td>
+                                    <td>< 100ms</td>
+                                    <td>慢查询日志</td>
+                                    <td>复杂查询需优化</td>
+                                </tr>
+                                <tr>
+                                    <td>文件上传</td>
+                                    <td>< 10秒</td>
+                                    <td>实际测试</td>
+                                    <td>10MB以内文件</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">7.3 安全要求</h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                                <h4 class="font-medium text-red-800 mb-2">🔒 认证授权</h4>
+                                <ul class="text-sm text-red-700 space-y-1">
+                                    <li>• JWT Token认证，过期时间2小时</li>
+                                    <li>• 刷新Token机制，避免频繁登录</li>
+                                    <li>• 基于角色的权限控制（RBAC）</li>
+                                    <li>• 接口级别权限校验</li>
+                                    <li>• 敏感操作二次确认</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                <h4 class="font-medium text-yellow-800 mb-2">🛡️ 数据安全</h4>
+                                <ul class="text-sm text-yellow-700 space-y-1">
+                                    <li>• 敏感数据加密存储</li>
+                                    <li>• SQL注入防护</li>
+                                    <li>• XSS攻击防护</li>
+                                    <li>• CSRF攻击防护</li>
+                                    <li>• 文件上传安全校验</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">7.4 代码规范</h3>
+                        
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <h4 class="font-medium text-blue-800 mb-3">📝 编码规范</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-700">
+                                <div>
+                                    <h5 class="font-medium mb-2">命名规范：</h5>
+                                    <ul class="space-y-1">
+                                        <li>• 类名：PascalCase（大驼峰）</li>
+                                        <li>• 方法名：camelCase（小驼峰）</li>
+                                        <li>• 常量：UPPER_SNAKE_CASE</li>
+                                        <li>• 数据库表：snake_case</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h5 class="font-medium mb-2">注释规范：</h5>
+                                    <ul class="space-y-1">
+                                        <li>• 类和方法必须有注释</li>
+                                        <li>• 复杂业务逻辑添加注释</li>
+                                        <li>• API接口使用Swagger注解</li>
+                                        <li>• 数据库字段添加注释</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 测试用例 -->
+                <section id="test-cases" class="section-card">
+                    <h2 class="section-title">8. 测试用例</h2>
+                    
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">8.1 功能测试用例</h3>
+                        
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                            <h4 class="font-medium text-green-800 mb-2">🧪 测试覆盖范围</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-green-700">
+                                <div>
+                                    <h5 class="font-medium mb-1">功能测试：</h5>
+                                    <ul class="space-y-1">
+                                        <li>• 用户登录注册</li>
+                                        <li>• 商户管理流程</li>
+                                        <li>• 任务处理流程</li>
+                                        <li>• 地图操作功能</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h5 class="font-medium mb-1">接口测试：</h5>
+                                    <ul class="space-y-1">
+                                        <li>• 参数校验</li>
+                                        <li>• 返回结果验证</li>
+                                        <li>• 异常处理</li>
+                                        <li>• 性能测试</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h5 class="font-medium mb-1">兼容性测试：</h5>
+                                    <ul class="space-y-1">
+                                        <li>• 不同浏览器</li>
+                                        <li>• 不同设备尺寸</li>
+                                        <li>• 微信小程序环境</li>
+                                        <li>• 网络环境适应</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>测试模块</th>
+                                    <th>测试场景</th>
+                                    <th>测试步骤</th>
+                                    <th>预期结果</th>
+                                    <th>优先级</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td rowspan="3">用户认证</td>
+                                    <td>正常登录</td>
+                                    <td>输入正确用户名密码→点击登录</td>
+                                    <td>登录成功，跳转到首页</td>
+                                    <td>高</td>
+                                </tr>
+                                <tr>
+                                    <td>密码错误</td>
+                                    <td>输入错误密码→点击登录</td>
+                                    <td>提示密码错误，停留登录页</td>
+                                    <td>高</td>
+                                </tr>
+                                <tr>
+                                    <td>Token过期</td>
+                                    <td>Token过期后访问接口</td>
+                                    <td>自动跳转登录页</td>
+                                    <td>中</td>
+                                </tr>
+                                <tr>
+                                    <td rowspan="3">商户管理</td>
+                                    <td>商户列表查询</td>
+                                    <td>进入商户列表页→设置筛选条件</td>
+                                    <td>按条件展示商户列表</td>
+                                    <td>高</td>
+                                </tr>
+                                <tr>
+                                    <td>新增目标商户</td>
+                                    <td>填写商户信息→上传照片→提交</td>
+                                    <td>新增成功，列表中显示</td>
+                                    <td>高</td>
+                                </tr>
+                                <tr>
+                                    <td>商户状态转化</td>
+                                    <td>目标商户→转化为意向商户</td>
+                                    <td>状态更新，其他客户经理可见</td>
+                                    <td>高</td>
+                                </tr>
+                                <tr>
+                                    <td rowspan="3">任务处理</td>
+                                    <td>领取商户任务</td>
+                                    <td>选择商户→确认领取</td>
+                                    <td>领取成功，3天有效期</td>
+                                    <td>高</td>
+                                </tr>
+                                <tr>
+                                    <td>提交任务结果</td>
+                                    <td>填写处理结果→上传附件→提交</td>
+                                    <td>任务状态变为审核中</td>
+                                    <td>高</td>
+                                </tr>
+                                <tr>
+                                    <td>任务超时处理</td>
+                                    <td>3天内未处理任务</td>
+                                    <td>自动释放，需重新领取</td>
+                                    <td>中</td>
+                                </tr>
+                                <tr>
+                                    <td rowspan="2">地图功能</td>
+                                    <td>地图找商户</td>
+                                    <td>进入地图模式→绘制区域→导出潜客商户-目标商户导入</td>
+                                    <td>下发成功，客户经理范围内可见</td>
+                                    <td>中</td>
+                                </tr>
+                                
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">8.2 异常场景测试</h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-white border rounded-lg p-4">
+                                <h4 class="font-medium text-red-600 mb-3">网络异常测试</h4>
+                                <ul class="text-sm space-y-2">
+                                    <li><strong>断网场景：</strong>提示网络连接失败，支持重试</li>
+                                    <li><strong>网络慢：</strong>显示加载状态，超时后提示</li>
+                                    <li><strong>接口超时：</strong>重试机制，最多重试3次</li>
+                                    <li><strong>数据同步：</strong>网络恢复后自动同步数据</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="bg-white border rounded-lg p-4">
+                                <h4 class="font-medium text-orange-600 mb-3">边界值测试</h4>
+                                <ul class="text-sm space-y-2">
+                                    <li><strong>大数据量：</strong>1000+商户列表加载性能</li>
+                                    <li><strong>文件上传：</strong>大文件（10MB）上传处理</li>
+                                    <li><strong>并发操作：</strong>多人同时领取同一商户</li>
+                                    <li><strong>权限边界：</strong>跨权限访问拦截</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 部署方案 -->
+                <section id="deployment" class="section-card">
+                    <h2 class="section-title">9. 部署方案</h2>
+                    
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">9.1 部署架构图</h3>
+                        <div class="mermaid">
+graph TB
+    subgraph "负载均衡层"
+        LB[Nginx 负载均衡器]
+    end
+    
+    subgraph "应用层"
+        APP1[应用服务器1<br/>Spring Boot]
+        APP2[应用服务器2<br/>Spring Boot]
+        APP3[应用服务器3<br/>Spring Boot]
+    end
+    
+    subgraph "数据层"
+        DB1[(MySQL 主库)]
+        DB2[(MySQL 从库)]
+        REDIS[(Redis 集群)]
+        MONGO[(MongoDB)]
+    end
+    
+    subgraph "文件存储"
+        OSS[对象存储<br/>阿里云OSS]
+    end
+    
+    subgraph "监控层"
+        MONITOR[Prometheus<br/>Grafana]
+        LOG[ELK Stack]
+    end
+    
+    LB --> APP1
+    LB --> APP2
+    LB --> APP3
+    
+    APP1 --> DB1
+    APP2 --> DB1
+    APP3 --> DB1
+    
+    DB1 --> DB2
+    
+    APP1 --> REDIS
+    APP2 --> REDIS
+    APP3 --> REDIS
+    
+    APP1 --> MONGO
+    APP2 --> MONGO
+    APP3 --> MONGO
+    
+    APP1 --> OSS
+    APP2 --> OSS
+    APP3 --> OSS
+    
+    APP1 --> MONITOR
+    APP2 --> MONITOR
+    APP3 --> MONITOR
+    
+    APP1 --> LOG
+    APP2 --> LOG
+    APP3 --> LOG
+                        </div>
+                    </div>
+
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">9.2 环境配置</h3>
+                        
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>环境</th>
+                                    <th>用途</th>
+                                    <th>配置规格</th>
+                                    <th>域名</th>
+                                    <th>备注</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>开发环境</td>
+                                    <td>开发调试</td>
+                                    <td>2C4G</td>
+                                    <td>dev.task.domain.com</td>
+                                    <td>开发人员使用</td>
+                                </tr>
+                                <tr>
+                                    <td>测试环境</td>
+                                    <td>功能测试</td>
+                                    <td>4C8G</td>
+                                    <td>test.task.domain.com</td>
+                                    <td>测试团队使用</td>
+                                </tr>
+                                <tr>
+                                    <td>预发布环境</td>
+                                    <td>上线前验证</td>
+                                    <td>8C16G</td>
+                                    <td>stage.task.domain.com</td>
+                                    <td>与生产环境配置一致</td>
+                                </tr>
+                                <tr>
+                                    <td>生产环境</td>
+                                    <td>正式服务</td>
+                                    <td>16C32G（3台）</td>
+                                    <td>task.domain.com</td>
+                                    <td>高可用部署</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">9.3 CI/CD流程</h3>
+                        
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <h4 class="font-medium text-blue-800 mb-3">🚀 自动化部署流程</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                                <div class="text-center">
+                                    <div class="w-12 h-12 bg-blue-500 text-white rounded-full flex items-center justify-center mx-auto mb-2">1</div>
+                                    <h5 class="font-medium">代码提交</h5>
+                                    <p class="text-xs text-gray-600 mt-1">Git Push触发</p>
+                                </div>
+                                <div class="text-center">
+                                    <div class="w-12 h-12 bg-green-500 text-white rounded-full flex items-center justify-center mx-auto mb-2">2</div>
+                                    <h5 class="font-medium">自动构建</h5>
+                                    <p class="text-xs text-gray-600 mt-1">Jenkins编译打包</p>
+                                </div>
+                                <div class="text-center">
+                                    <div class="w-12 h-12 bg-yellow-500 text-white rounded-full flex items-center justify-center mx-auto mb-2">3</div>
+                                    <h5 class="font-medium">自动测试</h5>
+                                    <p class="text-xs text-gray-600 mt-1">单元测试+集成测试</p>
+                                </div>
+                                <div class="text-center">
+                                    <div class="w-12 h-12 bg-purple-500 text-white rounded-full flex items-center justify-center mx-auto mb-2">4</div>
+                                    <h5 class="font-medium">自动部署</h5>
+                                    <p class="text-xs text-gray-600 mt-1">Docker容器部署</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 附录 -->
+                <section id="appendix" class="section-card">
+                    <h2 class="section-title">10. 附录</h2>
+                    
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">10.1 数据字典</h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <h4 class="font-medium mb-3">商户表 (merchants)</h4>
+                                <table class="text-sm">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-left">字段名</th>
+                                            <th class="text-left">类型</th>
+                                            <th class="text-left">说明</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>id</td>
+                                            <td>VARCHAR(20)</td>
+                                            <td>商户ID（主键）</td>
+                                        </tr>
+                                        <tr>
+                                            <td>name</td>
+                                            <td>VARCHAR(100)</td>
+                                            <td>商户名称</td>
+                                        </tr>
+                                        <tr>
+                                            <td>type</td>
+                                            <td>ENUM</td>
+                                            <td>商户类型：target/intention/formal</td>
+                                        </tr>
+                                        <tr>
+                                            <td>source</td>
+                                            <td>ENUM</td>
+                                            <td>来源：system/map/manual</td>
+                                        </tr>
+                                        <tr>
+                                            <td>address</td>
+                                            <td>VARCHAR(255)</td>
+                                            <td>商户地址</td>
+                                        </tr>
+                                        <tr>
+                                            <td>longitude</td>
+                                            <td>DECIMAL(10,7)</td>
+                                            <td>经度</td>
+                                        </tr>
+                                        <tr>
+                                            <td>latitude</td>
+                                            <td>DECIMAL(10,7)</td>
+                                            <td>纬度</td>
+                                        </tr>
+                                        <tr>
+                                            <td>status</td>
+                                            <td>TINYINT</td>
+                                            <td>状态：1=活跃，0=停用</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div>
+                                <h4 class="font-medium mb-3">任务表 (tasks)</h4>
+                                <table class="text-sm">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-left">字段名</th>
+                                            <th class="text-left">类型</th>
+                                            <th class="text-left">说明</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>id</td>
+                                            <td>VARCHAR(20)</td>
+                                            <td>任务ID（主键）</td>
+                                        </tr>
+                                        <tr>
+                                            <td>merchant_id</td>
+                                            <td>VARCHAR(20)</td>
+                                            <td>商户ID（外键）</td>
+                                        </tr>
+                                        <tr>
+                                            <td>type</td>
+                                            <td>ENUM</td>
+                                            <td>任务类型：supplement/channel/visit/risk/suspend</td>
+                                        </tr>
+                                        <tr>
+                                            <td>status</td>
+                                            <td>ENUM</td>
+                                            <td>状态：pending/processing/reviewing/completed/rejected</td>
+                                        </tr>
+                                        <tr>
+                                            <td>assigned_to</td>
+                                            <td>VARCHAR(20)</td>
+                                            <td>分配给客户经理ID</td>
+                                        </tr>
+                                        <tr>
+                                            <td>claim_time</td>
+                                            <td>TIMESTAMP</td>
+                                            <td>领取时间</td>
+                                        </tr>
+                                        <tr>
+                                            <td>expire_time</td>
+                                            <td>TIMESTAMP</td>
+                                            <td>过期时间（领取后3天）</td>
+                                        </tr>
+                                        <tr>
+                                            <td>submit_time</td>
+                                            <td>TIMESTAMP</td>
+                                            <td>提交时间</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">10.2 错误码定义</h3>
+                        
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>错误码</th>
+                                    <th>HTTP状态码</th>
+                                    <th>错误信息</th>
+                                    <th>处理建议</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>1001</td>
+                                    <td>401</td>
+                                    <td>用户未登录</td>
+                                    <td>跳转到登录页</td>
+                                </tr>
+                                <tr>
+                                    <td>1002</td>
+                                    <td>401</td>
+                                    <td>Token已过期</td>
+                                    <td>自动刷新Token或重新登录</td>
+                                </tr>
+                                <tr>
+                                    <td>1003</td>
+                                    <td>403</td>
+                                    <td>权限不足</td>
+                                    <td>提示权限不足</td>
+                                </tr>
+                                <tr>
+                                    <td>2001</td>
+                                    <td>400</td>
+                                    <td>参数校验失败</td>
+                                    <td>高亮错误字段</td>
+                                </tr>
+                                <tr>
+                                    <td>2002</td>
+                                    <td>409</td>
+                                    <td>商户已被其他客户经理领取</td>
+                                    <td>提示重新选择商户</td>
+                                </tr>
+                                <tr>
+                                    <td>2003</td>
+                                    <td>400</td>
+                                    <td>任务已过期</td>
+                                    <td>提示重新领取</td>
+                                </tr>
+                                <tr>
+                                    <td>5001</td>
+                                    <td>500</td>
+                                    <td>系统内部错误</td>
+                                    <td>稍后重试或联系技术支持</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="feature-block">
+                        <h3 class="font-semibold text-lg mb-3">10.3 项目里程碑</h3>
+                        
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <div class="space-y-4">
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-3 h-3 bg-green-500 rounded-full"></div>
+                                    <div class="flex-1">
+                                        <div class="flex justify-between">
+                                            <span class="font-medium">需求分析与设计</span>
+                                            <span class="text-sm text-gray-500">已完成</span>
+                                        </div>
+                                        <div class="text-sm text-gray-600">产品需求文档、技术方案设计、原型设计</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-3 h-3 bg-blue-500 rounded-full"></div>
+                                    <div class="flex-1">
+                                        <div class="flex justify-between">
+                                            <span class="font-medium">基础框架搭建</span>
+                                            <span class="text-sm text-gray-500">第1-2周</span>
+                                        </div>
+                                        <div class="text-sm text-gray-600">项目架构、数据库设计、基础组件开发</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                                    <div class="flex-1">
+                                        <div class="flex justify-between">
+                                            <span class="font-medium">核心功能开发</span>
+                                            <span class="text-sm text-gray-500">第3-6周</span>
+                                        </div>
+                                        <div class="text-sm text-gray-600">商户管理、任务管理、地图功能</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-3 h-3 bg-purple-500 rounded-full"></div>
+                                    <div class="flex-1">
+                                        <div class="flex justify-between">
+                                            <span class="font-medium">测试与优化</span>
+                                            <span class="text-sm text-gray-500">第7-8周</span>
+                                        </div>
+                                        <div class="text-sm text-gray-600">功能测试、性能优化、Bug修复</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+                                    <div class="flex-1">
+                                        <div class="flex justify-between">
+                                            <span class="font-medium">上线部署</span>
+                                            <span class="text-sm text-gray-500">第9周</span>
+                                        </div>
+                                        <div class="text-sm text-gray-600">生产环境部署、用户培训、运维监控</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+        
+        <!-- 页脚 -->
+        <footer class="mt-8 pt-6 border-t border-gray-200 text-center text-gray-500">
+            <p>&copy; 2025 微邮付任务管理系统 PRD文档. 最后更新：2025年1月21日</p>
+            <p class="text-sm mt-2">本文档包含详细的产品需求说明，供开发团队参考实施</p>
+        </footer>
+    </div>
+
+    <script>
+        // 初始化 Mermaid
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true
+            }
+        });
+        
+        // 平滑滚动
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html> 

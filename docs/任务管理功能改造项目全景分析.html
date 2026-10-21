@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>任务管理功能改造项目全景分析</title>
+    <style>
+        :root {
+            --green-950: #102d20;
+            --green-800: #145c35;
+            --green-700: #08783b;
+            --green-600: #00963f;
+            --green-100: #def4e6;
+            --green-50: #f1faf4;
+            --blue-700: #1d5fa7;
+            --blue-50: #edf6ff;
+            --orange-700: #a84c0e;
+            --orange-50: #fff6e9;
+            --red-700: #ae2e24;
+            --red-50: #fff1ef;
+            --ink: #1c2922;
+            --muted: #617068;
+            --line: #dce5df;
+            --paper: #ffffff;
+            --canvas: #f2f5f3;
+            --shadow: 0 18px 50px rgba(22, 51, 35, 0.09);
+        }
+
+        * { box-sizing: border-box; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            margin: 0;
+            color: var(--ink);
+            background:
+                linear-gradient(rgba(18, 60, 38, 0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(18, 60, 38, 0.025) 1px, transparent 1px),
+                var(--canvas);
+            background-size: 28px 28px;
+            font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
+            line-height: 1.72;
+        }
+
+        a { color: inherit; }
+
+        .page {
+            width: min(1180px, calc(100% - 40px));
+            margin: 30px auto 80px;
+        }
+
+        .hero {
+            position: relative;
+            overflow: hidden;
+            padding: 58px 64px 52px;
+            color: #fff;
+            background:
+                radial-gradient(circle at 83% 15%, rgba(129, 255, 178, 0.22), transparent 30%),
+                linear-gradient(125deg, #0d3d25 0%, #08783b 66%, #00963f 100%);
+            border-radius: 26px;
+            box-shadow: var(--shadow);
+        }
+
+        .hero::after {
+            content: "";
+            position: absolute;
+            right: -64px;
+            bottom: -104px;
+            width: 310px;
+            height: 310px;
+            border: 42px solid rgba(255, 255, 255, 0.07);
+            border-radius: 50%;
+        }
+
+        .eyebrow {
+            margin-bottom: 16px;
+            color: #c4f3d5;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+        }
+
+        h1, h2, h3, h4, p { margin-top: 0; }
+
+        h1 {
+            max-width: 760px;
+            margin-bottom: 18px;
+            font-size: clamp(34px, 5vw, 58px);
+            line-height: 1.13;
+            letter-spacing: -0.04em;
+        }
+
+        .hero-lead {
+            max-width: 800px;
+            margin-bottom: 30px;
+            color: rgba(255, 255, 255, 0.83);
+            font-size: 17px;
+        }
+
+        .meta-row {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .meta-pill {
+            padding: 7px 12px;
+            color: #effff4;
+            background: rgba(255, 255, 255, 0.11);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 999px;
+            font-size: 13px;
+        }
+
+        .toc {
+            position: sticky;
+            top: 12px;
+            z-index: 20;
+            display: flex;
+            gap: 8px;
+            margin: 18px 0;
+            padding: 10px;
+            overflow-x: auto;
+            background: rgba(255, 255, 255, 0.92);
+            border: 1px solid rgba(215, 226, 219, 0.9);
+            border-radius: 15px;
+            box-shadow: 0 8px 24px rgba(22, 51, 35, 0.06);
+            backdrop-filter: blur(16px);
+        }
+
+        .toc a {
+            flex: 0 0 auto;
+            padding: 7px 12px;
+            color: #45554c;
+            border-radius: 9px;
+            font-size: 13px;
+            text-decoration: none;
+        }
+
+        .toc a:hover { color: var(--green-700); background: var(--green-50); }
+
+        section {
+            margin-top: 18px;
+            padding: 36px 40px;
+            background: var(--paper);
+            border: 1px solid rgba(215, 226, 219, 0.92);
+            border-radius: 20px;
+            box-shadow: 0 10px 28px rgba(22, 51, 35, 0.045);
+            scroll-margin-top: 80px;
+        }
+
+        .section-kicker {
+            margin-bottom: 7px;
+            color: var(--green-700);
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.16em;
+        }
+
+        h2 {
+            margin-bottom: 22px;
+            color: var(--green-950);
+            font-size: 27px;
+            line-height: 1.25;
+        }
+
+        h3 {
+            margin: 24px 0 12px;
+            color: #173b28;
+            font-size: 18px;
+        }
+
+        h4 {
+            margin-bottom: 7px;
+            color: #1d3828;
+            font-size: 15px;
+        }
+
+        .lead {
+            max-width: 900px;
+            color: #46574e;
+            font-size: 16px;
+        }
+
+        .grid-2, .grid-3, .grid-4 {
+            display: grid;
+            gap: 14px;
+        }
+
+        .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+        .card {
+            padding: 19px;
+            background: #fbfcfb;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+        }
+
+        .card p:last-child, .callout p:last-child { margin-bottom: 0; }
+
+        .metric {
+            padding: 20px;
+            background: linear-gradient(145deg, #f8fcf9, #eef8f1);
+            border: 1px solid #d7eadc;
+            border-radius: 16px;
+        }
+
+        .metric b {
+            display: block;
+            margin-bottom: 2px;
+            color: var(--green-700);
+            font-size: 30px;
+            line-height: 1.2;
+        }
+
+        .metric span { color: var(--muted); font-size: 13px; }
+
+        .callout {
+            margin: 18px 0;
+            padding: 18px 20px;
+            background: var(--green-50);
+            border-left: 4px solid var(--green-600);
+            border-radius: 5px 13px 13px 5px;
+        }
+
+        .callout.warning { background: var(--orange-50); border-left-color: #e1812c; }
+        .callout.danger { background: var(--red-50); border-left-color: #db5045; }
+        .callout.info { background: var(--blue-50); border-left-color: #3980c8; }
+
+        ul, ol { margin: 8px 0 0; padding-left: 21px; }
+        li + li { margin-top: 6px; }
+
+        .tag-row { display: flex; flex-wrap: wrap; gap: 7px; }
+
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            min-height: 28px;
+            padding: 3px 10px;
+            color: #215337;
+            background: #edf8f0;
+            border: 1px solid #d1ead8;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .tag.blue { color: #245c90; background: #eff7ff; border-color: #d5e8fa; }
+        .tag.orange { color: #8d4b12; background: #fff7ec; border-color: #f5dfbd; }
+        .tag.red { color: #9b332c; background: #fff2f0; border-color: #f0d2ce; }
+
+        .flow {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 23px;
+            align-items: stretch;
+            margin: 20px 0;
+        }
+
+        .flow-step {
+            position: relative;
+            min-height: 112px;
+            padding: 16px;
+            background: #f7faf8;
+            border: 1px solid var(--line);
+            border-radius: 13px;
+        }
+
+        .flow-step:not(:last-child)::after {
+            content: "→";
+            position: absolute;
+            top: 50%;
+            right: -18px;
+            color: var(--green-600);
+            font-size: 22px;
+            font-weight: 800;
+            transform: translateY(-50%);
+        }
+
+        .step-no {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--green-700);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.1em;
+        }
+
+        table {
+            width: 100%;
+            margin-top: 14px;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 13px 14px;
+            text-align: left;
+            vertical-align: top;
+            border-bottom: 1px solid #e4ebe6;
+        }
+
+        th {
+            color: #31503e;
+            background: #f4f8f5;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        tr:last-child td { border-bottom: 0; }
+
+        code {
+            padding: 2px 6px;
+            color: #245137;
+            background: #eef6f0;
+            border-radius: 5px;
+            font-family: Consolas, monospace;
+            font-size: 0.92em;
+        }
+
+        .priority {
+            display: inline-flex;
+            min-width: 46px;
+            justify-content: center;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .priority.current { color: #fff; background: var(--green-700); }
+        .priority.history { color: #86521b; background: #ffedcf; }
+        .priority.prototype { color: #365e7c; background: #e5f1fa; }
+
+        .footer {
+            padding: 26px 10px 0;
+            color: #6b7770;
+            font-size: 13px;
+            text-align: center;
+        }
+
+        @media (max-width: 900px) {
+            .page { width: min(100% - 24px, 1180px); margin-top: 12px; }
+            .hero { padding: 42px 30px; border-radius: 20px; }
+            section { padding: 28px 24px; }
+            .grid-4, .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .flow { grid-template-columns: 1fr; gap: 12px; }
+            .flow-step { min-height: 0; }
+            .flow-step:not(:last-child)::after { content: "↓"; top: auto; right: 50%; bottom: -20px; transform: translateX(50%); }
+            table { display: block; overflow-x: auto; }
+        }
+
+        @media (max-width: 600px) {
+            .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+            .hero { padding: 34px 23px; }
+            section { padding: 24px 18px; border-radius: 16px; }
+            h2 { font-size: 23px; }
+            .toc { top: 4px; }
+        }
+
+        @media print {
+            body { background: #fff; }
+            .page { width: 100%; margin: 0; }
+            .hero, section { break-inside: avoid; box-shadow: none; }
+            .toc { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <header class="hero">
+            <div class="eyebrow">微邮付 · 产品方案与交互原型</div>
+            <h1>任务管理功能改造项目全景分析</h1>
+            <p class="hero-lead">本报告基于项目内 PRD、架构说明、地图与目标商户方案、README，以及 15 个 PC 原型和 14 个移动端原型交叉分析形成。</p>
+            <div class="meta-row">
+                <span class="meta-pill">分析日期：2026-09-18</span>
+                <span class="meta-pill">核心方向：按商户维度聚合</span>
+                <span class="meta-pill">PC 管理下发 · 移动端领取执行</span>
+                <span class="meta-pill">原生 HTML / CSS / JavaScript 原型</span>
+            </div>
+        </header>
+
+        <nav class="toc" aria-label="报告目录">
+            <a href="#conclusion">项目结论</a>
+            <a href="#background">背景目标</a>
+            <a href="#domain">业务模型</a>
+            <a href="#pc">PC端</a>
+            <a href="#mobile">移动端</a>
+            <a href="#flow">业务流程</a>
+            <a href="#rules">业务规则</a>
+            <a href="#scope">原型现状</a>
+            <a href="#difference">口径差异</a>
+            <a href="#risk">风险建议</a>
+        </nav>
+
+        <section id="conclusion">
+            <div class="section-kicker">01 · EXECUTIVE SUMMARY</div>
+            <h2>项目结论</h2>
+            <p class="lead">该项目不是简单增加几类任务页面，而是对微邮付任务管理的组织方式进行重构：任务仍由上级机构按类型产生，但面向客户经理的执行入口改为以商户为中心聚合。</p>
+
+            <div class="grid-4">
+                <div class="metric"><b>2</b><span>两类核心对象：存量正式商户、目标商户</span></div>
+                <div class="metric"><b>5</b><span>正式商户任务类型</span></div>
+                <div class="metric"><b>15</b><span>PC 端静态原型页面</span></div>
+                <div class="metric"><b>14</b><span>移动端静态原型页面</span></div>
+            </div>
+
+            <div class="callout">
+                <h4>一句话定义</h4>
+                <p>PC 端负责把商户和任务组织、下发并监控；移动端负责按距离发现或领取商户，以商户为单位一次性查看和处理全部任务，并推动目标商户逐步转化为正式商户。</p>
+            </div>
+
+            <div class="grid-3">
+                <div class="card">
+                    <h4>核心改造</h4>
+                    <p>从“按任务类型进入多个列表”改为“按商户维度聚合任务”，降低多任务并行时的查找与跳转成本。</p>
+                </div>
+                <div class="card">
+                    <h4>业务闭环</h4>
+                    <p>机构下发 → 网点承接 → 客户经理领取或接收 → 现场处理 → 审核与完成 → PC 端查看进度。</p>
+                </div>
+                <div class="card">
+                    <h4>拓客闭环</h4>
+                    <p>目标商户 → 打卡走访 → 意向商户 → 进件或关联 → 正式商户，过程保留来源、归属和转化记录。</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="background">
+            <div class="section-kicker">02 · WHY</div>
+            <h2>项目背景与改造目标</h2>
+            <div class="grid-2">
+                <div class="card">
+                    <h3>原有问题</h3>
+                    <ul>
+                        <li>任务按类型拆分，同一商户的补充资料、风控、挂账等任务分散在不同入口。</li>
+                        <li>客户经理线下走访时需要反复返回和切换，无法围绕一个商户连续处理。</li>
+                        <li>新增任务类型往往意味着继续新增入口、列表和导航，扩展成本持续上升。</li>
+                        <li>风控和挂账长期依赖线下通知、人工转发和资料收集，缺少统一状态与过程留痕。</li>
+                        <li>目标商户主要依赖机构导入或客户经理主动录入，商户发现、距离排序和地图能力需要加强。</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>改造目标</h3>
+                    <ul>
+                        <li>以商户为聚合主体，单次进入即可查看该商户名下全部任务。</li>
+                        <li>保留各任务原有处理逻辑，只调整上层入口、聚合方式和状态呈现。</li>
+                        <li>建立任务池、领取、处理、审核、驳回、重新提交和完成的统一链路。</li>
+                        <li>支持目标商户的导入、附近展示、走访打卡和逐级转化。</li>
+                        <li>为后续新增任务类型预留统一承载框架，减少重复页面建设。</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="domain">
+            <div class="section-kicker">03 · DOMAIN MODEL</div>
+            <h2>业务模型</h2>
+
+            <h3>商户分类</h3>
+            <div class="grid-2">
+                <div class="card">
+                    <div class="tag-row"><span class="tag">存量商户</span><span class="tag">正式商户</span></div>
+                    <p>已经在微邮付平台入驻并归属具体网点，任务重点是资料合规、支付通道、存量维护、风险处置和挂账处置。</p>
+                </div>
+                <div class="card">
+                    <div class="tag-row"><span class="tag blue">目标商户</span><span class="tag orange">意向商户</span><span class="tag">正式商户</span></div>
+                    <p>尚未成为平台正式商户的潜在对象，通过走访、打卡、信息完善和进件逐步完成转化。</p>
+                </div>
+            </div>
+
+            <h3>组织与用户</h3>
+            <table>
+                <thead><tr><th>角色或层级</th><th>主要职责</th><th>主要端</th></tr></thead>
+                <tbody>
+                    <tr><td>省级机构</td><td>全局查看、任务和业务数据监控</td><td>PC</td></tr>
+                    <tr><td>市级机构</td><td>辖区任务管理、进度查看和数据分析</td><td>PC</td></tr>
+                    <tr><td>区县机构</td><td>任务承接、辖区查看和下级管理</td><td>PC</td></tr>
+                    <tr><td>网点／营业所</td><td>任务最终承接单位，商户归属和客户经理管理</td><td>PC</td></tr>
+                    <tr><td>客户经理</td><td>领取商户、现场走访、处理任务、提交资料和推进转化</td><td>移动端</td></tr>
+                </tbody>
+            </table>
+
+            <h3>正式商户任务类型</h3>
+            <div class="tag-row">
+                <span class="tag">补充资料</span>
+                <span class="tag blue">切换备用通道</span>
+                <span class="tag orange">走访维护</span>
+                <span class="tag red">风控任务</span>
+                <span class="tag red">挂账任务</span>
+            </div>
+        </section>
+
+        <section id="pc">
+            <div class="section-kicker">04 · PC</div>
+            <h2>PC端功能全景</h2>
+            <p class="lead">PC 端是机构管理侧，核心职责是组织商户数据、产生任务、查看处理进度和保留详情记录，不承担客户经理现场执行。</p>
+
+            <div class="grid-2">
+                <div class="card">
+                    <h3>正式商户任务管理</h3>
+                    <ul>
+                        <li>按商户号、商户名称、任务类型和任务状态筛选。</li>
+                        <li>通过 Excel 批量导入或下发正式商户任务。</li>
+                        <li>查看待领取、待处理、审核中、已驳回、已完成等状态分布。</li>
+                        <li>同时保留按任务类型详情和按商户维度聚合详情两套原型，用于表达改造前后关系。</li>
+                        <li>查看任务下发、领取、处理、审核和完成的全过程。</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>目标商户任务管理</h3>
+                    <ul>
+                        <li>批量导入目标商户并下发至网点或任务池。</li>
+                        <li>查看目标、意向、正式等转化阶段及地区分布。</li>
+                        <li>查看具体目标商户的走访、打卡和转化进度。</li>
+                        <li>承接地图找商户导出的潜客数据，再导入目标商户列表。</li>
+                        <li>保留早期围栏和区域点选原型，但最新完整 PRD 已将其从当前方案中简化。</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>地图找商户</h3>
+                    <ul>
+                        <li>接入腾讯地图及 POI 数据。</li>
+                        <li>在地图上绘制区域，获取区域内尚未成为微邮付正式商户的潜客点位。</li>
+                        <li>将潜客数据导出为 Excel，再进入目标商户批量导入流程。</li>
+                        <li>正式商户地图在最新口径中主要用于位置展示。</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>任务驾驶舱</h3>
+                    <ul>
+                        <li>原型已覆盖商户数量、任务数量、完成率、任务类型分布和地区分布。</li>
+                        <li>包含时间筛选、趋势图、热力图和实时动态等展示能力。</li>
+                        <li><strong>最新完整 PRD 标记为“本期不做”</strong>，当前可作为后续规划或汇报演示素材。</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="mobile">
+            <div class="section-kicker">05 · MOBILE</div>
+            <h2>移动端功能全景</h2>
+            <p class="lead">移动端面向客户经理，以任务接收、商户领取、现场处理、附近商户查找和目标商户转化为主。</p>
+
+            <div class="grid-3">
+                <div class="card">
+                    <h3>任务类型选择</h3>
+                    <p>登录或进入任务管理后先选择“存量商户”或“目标商户”，把两类业务对象和处理目标分开。</p>
+                </div>
+                <div class="card">
+                    <h3>存量商户任务列表</h3>
+                    <p>提供待领取、已领取、进行中、已完成等视图，支持搜索、筛选、排序和列表／地图切换。</p>
+                </div>
+                <div class="card">
+                    <h3>商户维度任务详情</h3>
+                    <p>进入一个商户即可查看其全部任务，按状态展示待处理、审核中、已驳回和已完成任务。</p>
+                </div>
+                <div class="card">
+                    <h3>具体任务处理</h3>
+                    <p>进入原有任务处理表单，完成资料上传、原因说明、解决方案选择、结算账户填写和重新提交。</p>
+                </div>
+                <div class="card">
+                    <h3>目标商户管理</h3>
+                    <p>查看目标、意向、正式三个阶段，支持列表和地图模式、附近排序、目标商户详情及走访记录。</p>
+                </div>
+                <div class="card">
+                    <h3>目标商户新增与转化</h3>
+                    <p>可通过系统导入数据、地图搜索 POI 或手动录入形成目标商户，并完成打卡、意向转化和正式商户关联。</p>
+                </div>
+            </div>
+
+            <h3>移动端关键页面关系</h3>
+            <div class="flow">
+                <div class="flow-step"><span class="step-no">STEP 01</span><strong>任务类型选择</strong><br>选择存量商户或目标商户</div>
+                <div class="flow-step"><span class="step-no">STEP 02</span><strong>商户列表／地图</strong><br>搜索、筛选、距离排序</div>
+                <div class="flow-step"><span class="step-no">STEP 03</span><strong>领取或打卡</strong><br>确定归属并开始处理</div>
+                <div class="flow-step"><span class="step-no">STEP 04</span><strong>商户详情</strong><br>查看全部任务或转化信息</div>
+                <div class="flow-step"><span class="step-no">STEP 05</span><strong>处理与提交</strong><br>审核、驳回重提或完成转化</div>
+            </div>
+        </section>
+
+        <section id="flow">
+            <div class="section-kicker">06 · END-TO-END FLOW</div>
+            <h2>核心业务流程</h2>
+
+            <h3>正式商户任务</h3>
+            <div class="flow">
+                <div class="flow-step"><span class="step-no">01</span><strong>机构下发</strong><br>按任务类型导入或创建任务</div>
+                <div class="flow-step"><span class="step-no">02</span><strong>聚合到商户</strong><br>同一商户的任务集中展示</div>
+                <div class="flow-step"><span class="step-no">03</span><strong>客户经理领取</strong><br>领取商户及其全部任务</div>
+                <div class="flow-step"><span class="step-no">04</span><strong>逐项处理</strong><br>进入对应任务表单提交</div>
+                <div class="flow-step"><span class="step-no">05</span><strong>审核闭环</strong><br>完成或驳回后重新提交</div>
+            </div>
+
+            <h3>目标商户转化</h3>
+            <div class="flow">
+                <div class="flow-step"><span class="step-no">01</span><strong>形成目标商户</strong><br>系统导入、地图搜索或手动录入</div>
+                <div class="flow-step"><span class="step-no">02</span><strong>附近发现</strong><br>按客户经理当前位置排序</div>
+                <div class="flow-step"><span class="step-no">03</span><strong>走访打卡</strong><br>补充照片、联系人和纪要</div>
+                <div class="flow-step"><span class="step-no">04</span><strong>意向转化</strong><br>持续跟进并完善资料</div>
+                <div class="flow-step"><span class="step-no">05</span><strong>正式商户</strong><br>进件成功或关联正式商户号</div>
+            </div>
+
+            <div class="callout info">
+                <h4>地图能力的定位</h4>
+                <p>地图不是独立业务终点，而是服务于“发现附近商户、展示商户位置、辅助筛选导航、获取目标商户数据”的工具层。</p>
+            </div>
+        </section>
+
+        <section id="rules">
+            <div class="section-kicker">07 · RULES</div>
+            <h2>业务规则与状态流转</h2>
+            <table>
+                <thead><tr><th>规则主题</th><th>当前方案结论</th></tr></thead>
+                <tbody>
+                    <tr><td>领取粒度</td><td>存量任务的领取概念上升到商户维度；领取商户后，该商户下全部任务归属当前客户经理。</td></tr>
+                    <tr><td>领取时效</td><td>领取后 3 天内至少处理 1 个任务；到期前 1 天提醒，逾期失效并需要重新领取。</td></tr>
+                    <tr><td>任务状态</td><td>待处理 → 审核中 → 已完成；审核不通过时进入已驳回，再由客户经理修改后重新提交。</td></tr>
+                    <tr><td>完成商户</td><td>商户下全部任务完成后，从“进行中”进入“已完成”；移动端原 PRD 建议保留近 90 天记录。</td></tr>
+                    <tr><td>特殊排序</td><td>即将失效优先于驳回任务，驳回任务优先于普通进行中任务，随后再按距离等条件排序。</td></tr>
+                    <tr><td>目标商户状态</td><td>目标商户 → 意向商户 → 正式商户；也可在核实后直接输入正式商户号完成关联。</td></tr>
+                    <tr><td>位置能力</td><td>商户列表可以按照客户经理当前距离展示，地图模式支持点位、卡片、列表联动和导航。</td></tr>
+                    <tr><td>权限与归属</td><td>任务最终下发到网点并由客户经理执行；目标商户的可见范围应结合来源、归属及转化状态控制。</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="scope">
+            <div class="section-kicker">08 · PROTOTYPE INVENTORY</div>
+            <h2>原型现状与风险</h2>
+
+            <h3>PC 原型</h3>
+            <table>
+                <thead><tr><th>模块</th><th>页面范围</th><th>说明</th></tr></thead>
+                <tbody>
+                    <tr><td>正式商户</td><td>正式商户列表、5 类任务详情、弹窗详情</td><td>同时表达任务类型视角和处理全过程。</td></tr>
+                    <tr><td>商户聚合</td><td>商户维度任务列表、商户维度任务详情</td><td>直接对应本次“按商户维度聚合”的核心改造。</td></tr>
+                    <tr><td>目标商户</td><td>目标商户列表</td><td>承担目标商户导入、统计、进度查看。</td></tr>
+                    <tr><td>地图</td><td>地图任务列表、新增地图任务、查看地图任务</td><td>包含不同历史阶段的地图下发方案。</td></tr>
+                    <tr><td>驾驶舱</td><td>任务驾驶舱</td><td>原型完整，但最新 PRD 标记本期不做。</td></tr>
+                </tbody>
+            </table>
+
+            <h3>移动端原型</h3>
+            <table>
+                <thead><tr><th>模块</th><th>页面范围</th><th>说明</th></tr></thead>
+                <tbody>
+                    <tr><td>入口</td><td>任务类型选择页</td><td>区分存量商户与目标商户。</td></tr>
+                    <tr><td>存量商户</td><td>任务列表、升级版地图、商户任务详情、即将失效详情</td><td>覆盖领取、列表地图切换、任务聚合和提醒。</td></tr>
+                    <tr><td>任务处理</td><td>风控任务、挂账任务</td><td>已实现资料、解决方案和分享等交互示意。</td></tr>
+                    <tr><td>目标商户</td><td>目标商户列表、地图模式、升级版目标地图</td><td>展示目标／意向／正式阶段和附近商户。</td></tr>
+                    <tr><td>拓客操作</td><td>地图找商户、新增目标商户、目标详情、意向详情</td><td>覆盖地图搜索、手工录入、打卡、业绩和正式商户关联。</td></tr>
+                </tbody>
+            </table>
+
+            <div class="callout warning">
+                <h4>原型不是统一技术应用</h4>
+                <p>页面均为独立 HTML，依赖 Tailwind CDN 和页面内脚本，没有统一路由、数据层或组件体系。它适合方案演示和交互验证，不能直接等同于生产实现。</p>
+            </div>
+        </section>
+
+        <section id="difference">
+            <div class="section-kicker">09 · SOURCE OF TRUTH</div>
+            <h2>文档口径差异</h2>
+            <p class="lead">项目经历多轮调整，部分早期方案仍保留在文档和原型中。建议以“最新完整 PRD 的明确更新说明”为当前主口径，旧文档用于理解演进过程。</p>
+
+            <table>
+                <thead><tr><th>主题</th><th>当前推荐口径</th><th>历史或原型表现</th></tr></thead>
+                <tbody>
+                    <tr>
+                        <td>地图下发方式</td>
+                        <td><span class="priority current">当前</span> 最新完整 PRD v6.0 明确简化地图功能，取消围栏拓客和区域点选指派。</td>
+                        <td><span class="priority history">历史</span> 早期目标商户地图方案仍详细描述网点围栏、市级区域点选和任务池领取。</td>
+                    </tr>
+                    <tr>
+                        <td>目标商户来源</td>
+                        <td><span class="priority current">当前</span> 可归并为“系统导入”和“客户经理添加”两大类；客户经理添加可包含地图搜索 POI 与手动录入。</td>
+                        <td><span class="priority history">历史</span> 早期文档拆分为系统导入、系统指派、地图添加、手动录入四类。</td>
+                    </tr>
+                    <tr>
+                        <td>任务驾驶舱</td>
+                        <td><span class="priority current">当前</span> 最新完整 PRD 标记为本期不做。</td>
+                        <td><span class="priority prototype">原型</span> 页面和 README 已完整展示统计、图表、热力图和动态信息。</td>
+                    </tr>
+                    <tr>
+                        <td>PC 任务展示</td>
+                        <td><span class="priority current">当前</span> 改造方向是以商户维度聚合任务。</td>
+                        <td><span class="priority prototype">原型</span> 项目仍同时保留按任务类型详情页，主要用于复用具体任务处理逻辑和对比。</td>
+                    </tr>
+                    <tr>
+                        <td>目标商户领取</td>
+                        <td><span class="priority current">待统一</span> 简化方案下需进一步明确系统导入目标商户是打卡即归属，还是需要显式领取。</td>
+                        <td><span class="priority history">历史</span> 不同文档分别使用领取、打卡领取、直接归属和仅自己可见等表达。</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="callout">
+                <h4>建议的文档优先级</h4>
+                <p>《任务管理系统完整PRD文档.html》v6.0 → 《任务管理整合需求文档.md》→ 《任务管理系统PRD-更新版.md》与架构说明 → 早期地图、围栏和区域指派文档。</p>
+            </div>
+        </section>
+
+        <section id="risk">
+            <div class="section-kicker">10 · NEXT</div>
+            <h2>风险与后续建议</h2>
+
+            <div class="grid-2">
+                <div class="card">
+                    <h3>当前可见风险</h3>
+                    <ol>
+                        <li><strong>历史方案混用：</strong>若不先冻结地图口径，后续功能增加容易重新引入已取消的围栏与区域指派。</li>
+                        <li><strong>归属规则不够统一：</strong>存量商户领取规则较清晰，目标商户的领取、打卡和可见范围仍需统一。</li>
+                        <li><strong>原型链接缺口：</strong><code>挂帐任务明细页.html</code> 引用了不存在的 <code>任务列表页.html</code>。</li>
+                        <li><strong>开发工具资源缺口：</strong>升级版地图页面引用了不存在的 <code>js/stagewise-toolbar.js</code>。</li>
+                        <li><strong>外部资源依赖：</strong>移动页面普遍使用 Tailwind CDN，离线或受限网络下可能无法正确显示。</li>
+                        <li><strong>静态数据一致性：</strong>驾驶舱、列表和详情中的统计数字是演示数据，尚未形成统一数据源。</li>
+                    </ol>
+                </div>
+                <div class="card">
+                    <h3>增加功能前的建议</h3>
+                    <ol>
+                        <li>先确定本期范围：地图仅做展示／找商户，还是重新启用机构地图下发。</li>
+                        <li>统一两类商户的“任务池、归属、领取、失效、重新领取”规则。</li>
+                        <li>补充统一状态字典，明确商户状态、任务状态和审核状态之间的关系。</li>
+                        <li>以商户任务详情作为新增任务类型的统一容器，具体任务继续使用独立处理表单。</li>
+                        <li>为目标商户定义来源字段、来源展示名称、可见范围和转化后的数据继承规则。</li>
+                        <li>将原型导航关系整理成统一页面地图，避免后续新增页面继续产生断链。</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="callout danger">
+                <h4>本次分析未擅自处理的内容</h4>
+                <p>失效链接、历史地图功能、原型业务文案和页面内部交互均未修改。本次移动端改造仅增加统一手机／小程序展示外层，保持原功能界面与业务逻辑不变。</p>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-kicker">APPENDIX</div>
+            <h2>分析依据</h2>
+            <div class="grid-2">
+                <div class="card">
+                    <h3>核心文档</h3>
+                    <ul>
+                        <li>任务管理系统完整PRD文档.html（v6.0）</li>
+                        <li>任务管理系统PRD-更新版.md</li>
+                        <li>任务管理整合需求文档.md</li>
+                        <li>任务管理整合需求方案.doc</li>
+                        <li>任务管理功能需求.doc</li>
+                        <li>任务管理功能架构图.md</li>
+                        <li>task_management_architecture.html</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>地图与目标商户文档</h3>
+                    <ul>
+                        <li>目标商户走访优化（腾讯地图集成）.md</li>
+                        <li>目标商户走访功能流程说明.doc</li>
+                        <li>地图模式功能逻辑说明与分析.doc</li>
+                        <li>地图模式商户任务.doc</li>
+                        <li>README.md</li>
+                        <li>PC 与移动端全部 HTML 原型页面</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <footer class="footer">任务管理功能改造项目全景分析 · 依据项目当前文档与静态原型整理</footer>
+    </main>
+</body>
+</html>
